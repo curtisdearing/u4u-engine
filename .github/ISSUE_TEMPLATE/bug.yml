@@ -1,0 +1,55 @@
+name: Bug
+description: Something the engine does wrong
+labels: [bug]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: run with the latest commit and confirm the bug still exists.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where in the pipeline
+      options:
+        - Parser (VCF / 23andMe / CSV / rsID list)
+        - Quality filter
+        - rsID resolution (Ensembl)
+        - Annotation — VEP
+        - Annotation — ClinVar
+        - Annotation — gnomAD
+        - Annotation — MyVariant fallback
+        - Scoring / tier assignment
+        - Plain-English summary
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What's wrong
+      description: What did you expect, and what actually happened?
+      placeholder: |
+        Expected: variant rs429358 should have clinvar = "pathogenic"
+        Got: clinvar = null, disease_name = null
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Minimal code or file snippet that triggers the bug.
+      render: python
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.11.8"
+    validations:
+      required: true

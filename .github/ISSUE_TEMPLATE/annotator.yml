@@ -1,0 +1,42 @@
+name: Annotator / data source issue
+description: A specific variant is getting wrong or missing data from ClinVar, gnomAD, VEP, or MyVariant
+labels: [annotator]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for data correctness issues — wrong classification, missing frequency, wrong gene — not for crashes or exceptions (use the Bug template for those).
+
+  - type: input
+    id: variant
+    attributes:
+      label: Variant
+      description: rsID, or chrom:pos:ref:alt
+      placeholder: "rs113488022  or  7:140453136:A:T"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Affected data source
+      options:
+        - ClinVar
+        - gnomAD
+        - Ensembl VEP
+        - MyVariant
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: wrong
+    attributes:
+      label: What's wrong
+      description: What does the engine return vs. what the source actually says?
+      placeholder: |
+        Engine returns: clinvar = null
+        ClinVar shows: Pathogenic (https://www.ncbi.nlm.nih.gov/clinvar/variation/12375/)
+    validations:
+      required: true

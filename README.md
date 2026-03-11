@@ -1,5 +1,9 @@
 # u4u-engine
 
+[![tests](https://github.com/curtisdearing/u4u-engine/actions/workflows/test.yml/badge.svg)](https://github.com/curtisdearing/u4u-engine/actions/workflows/test.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Standalone genomics variant analysis engine for the U4U platform.
 
 **Zero web framework dependencies.** Install it in any Python service and call `run_pipeline()`. FastAPI workers, Celery tasks, CLI scripts, and Jupyter notebooks all use the same interface.
