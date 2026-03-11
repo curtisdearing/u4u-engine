@@ -2,7 +2,6 @@
 name = "u4u-engine"
 version = "1.0.0"
 description = "U4U genomics variant analysis engine — framework-free, wrappable by any worker"
-readme = "../README.md"
 requires-python = ">=3.11"
 
 dependencies = [
