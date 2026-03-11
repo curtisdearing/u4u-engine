@@ -6,7 +6,7 @@
 
 Standalone genomics variant analysis engine for the U4U platform.
 
-**Zero web framework dependencies.** Install it in any Python service and call `run_pipeline()`. FastAPI workers, Celery tasks, CLI scripts, and Jupyter notebooks all use the same interface.
+Takes a raw genome file, runs it through a 10-step annotation pipeline, and returns a scored, prioritized list of variants with plain-English summaries. No web framework dependencies — import it wherever and call `run_pipeline()`.
 
 ---
 
@@ -227,12 +227,11 @@ def run_analysis(self, file_bytes: bytes, filename: str, filters: list):
 
 ---
 
-## Running Tests
+## Tests
 
 ```bash
-# With pytest installed:
 pytest tests/
 
-# Without pytest (stdlib only):
+# without pytest:
 PYTHONPATH=. python3 -m unittest discover tests/
 ```

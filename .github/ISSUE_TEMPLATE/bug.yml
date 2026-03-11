@@ -3,11 +3,6 @@ description: Something the engine does wrong
 labels: [bug]
 
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Before filing: run with the latest commit and confirm the bug still exists.
-
   - type: dropdown
     id: area
     attributes:
@@ -32,8 +27,8 @@ body:
       label: What's wrong
       description: What did you expect, and what actually happened?
       placeholder: |
-        Expected: variant rs429358 should have clinvar = "pathogenic"
-        Got: clinvar = null, disease_name = null
+        Expected: clinvar = "pathogenic"
+        Got: clinvar = null
     validations:
       required: true
 
@@ -41,7 +36,6 @@ body:
     id: reproduce
     attributes:
       label: How to reproduce
-      description: Minimal code or file snippet that triggers the bug.
       render: python
     validations:
       required: true

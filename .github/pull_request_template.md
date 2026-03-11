@@ -1,17 +1,8 @@
-## What changed
+## What changed and why
 
-<!-- One paragraph. Not a bullet list of files you touched. -->
+<!-- Context for someone reading this a year from now. -->
 
-## Why
+## Checklist
 
-<!-- What problem does this fix or what behavior does this add? Link an issue if there is one. -->
-
-## Tests
-
-- [ ] Existing tests pass (`pytest tests/ -v`)
-- [ ] New behavior has test coverage
-
-## Docs
-
-- [ ] No doc change needed
-- [ ] Updated the relevant file in `docs/`
+- [ ] `pytest tests/ -v` passes
+- [ ] Updated `docs/` if behavior changed
