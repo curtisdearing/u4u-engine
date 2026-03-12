@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>U4U System Map</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace; padding: 32px; }
+
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; color: #f8fafc; }
+  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 32px; }
+
+  .legend { display: flex; gap: 20px; margin-bottom: 32px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  .diagram { display: grid; grid-template-columns: 180px 1fr 200px; gap: 0; position: relative; }
+
+  /* Column headers */
+  .col-header { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #475569; padding: 0 0 12px 0; }
+
+  /* Boxes */
+  .box {
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    border: 1px solid;
+    position: relative;
+  }
+  .box-title { font-weight: 700; font-size: 12px; margin-bottom: 2px; }
+  .box-sub { font-size: 11px; opacity: 0.75; }
+
+  .exists    { background: #052e16; border-color: #16a34a; color: #bbf7d0; }
+  .exists .box-title { color: #4ade80; }
+  .missing   { background: #431407; border-color: #c2410c; color: #fed7aa; }
+  .missing .box-title { color: #fb923c; }
+  .external  { background: #0c1a3a; border-color: #1d4ed8; color: #bfdbfe; }
+  .external .box-title { color: #60a5fa; }
+  .v2        { background: #2e1065; border-color: #6d28d9; color: #ddd6fe; }
+  .v2 .box-title { color: #a78bfa; }
+  .output    { background: #0d2a2a; border-color: #0f766e; color: #99f6e4; }
+  .output .box-title { color: #2dd4bf; }
+
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+  .badge-exists   { background: #16a34a; color: #f0fdf4; }
+  .badge-missing  { background: #c2410c; color: #fff7ed; }
+  .badge-external { background: #1d4ed8; color: #eff6ff; }
+  .badge-v2       { background: #6d28d9; color: #faf5ff; }
+  .badge-output   { background: #0f766e; color: #f0fdfa; }
+
+  /* Left column - inputs */
+  .inputs { display: flex; flex-direction: column; gap: 8px; padding-right: 16px; }
+
+  /* Center column - pipeline */
+  .pipeline { display: flex; flex-direction: column; gap: 0; padding: 0 16px; border-left: 1px solid #1e293b; border-right: 1px solid #1e293b; }
+  .step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 4px; }
+  .step-num { font-size: 10px; font-weight: 700; color: #334155; min-width: 18px; padding-top: 11px; }
+  .step-box { flex: 1; }
+
+  .arrow-down { text-align: center; color: #334155; font-size: 16px; line-height: 1; padding: 2px 0; margin-left: 28px; }
+
+  /* Right column - APIs */
+  .apis { display: flex; flex-direction: column; gap: 8px; padding-left: 16px; }
+
+  /* Output row */
+  .output-row { margin-top: 24px; }
+  .output-row .col-header { grid-column: 1 / -1; }
+
+  /* Missing section */
+  .missing-section { margin-top: 32px; }
+  .missing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+
+  /* V2 section */
+  .v2-section { margin-top: 32px; }
+  .v2-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+
+  /* Data flow label */
+  .flow-label {
+    font-size: 10px;
+    color: #334155;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-align: center;
+    padding: 4px;
+  }
+
+  /* Connector row between sections */
+  .connector { text-align: center; color: #334155; font-size: 20px; margin: 12px 0; letter-spacing: 4px; }
+
+  .section-divider {
+    border: none;
+    border-top: 1px dashed #1e3a5f;
+    margin: 28px 0;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #334155;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .gap-note {
+    font-size: 11px;
+    color: #64748b;
+    font-style: italic;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  .owner-tag {
+    font-size: 10px;
+    color: #475569;
+    margin-top: 4px;
+  }
+
+  .top-grid { display: grid; grid-template-columns: 180px 1fr 200px; gap: 0; }
+  .top-grid .col-header { padding-bottom: 12px; }
+  .inputs-wrap { padding-right: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .pipeline-wrap { padding: 0 16px; border-left: 1px solid #1e293b; border-right: 1px solid #1e293b; display: flex; flex-direction: column; gap: 0; }
+  .apis-wrap { padding-left: 16px; display: flex; flex-direction: column; gap: 8px; }
+
+  .api-callout {
+    font-size: 10px;
+    color: #475569;
+    text-align: center;
+    padding: 4px 8px;
+    border-top: 1px dashed #1e293b;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>U4U SYSTEM MAP</h1>
+<p class="subtitle">Last updated: March 2026 &nbsp;&bull;&nbsp; Green = exists &nbsp;&bull;&nbsp; Orange = not built &nbsp;&bull;&nbsp; Blue = external &nbsp;&bull;&nbsp; Purple = V2</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> Exists and works</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#c2410c"></div> Not built yet</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div> External service</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0f766e"></div> Output</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6d28d9"></div> V2 (subscription)</div>
+</div>
+
+<!-- TOP SECTION: Input + Pipeline + APIs -->
+<div class="top-grid">
+  <div class="col-header">INPUT FILES</div>
+  <div class="col-header" style="padding-left:16px">ANNOTATION PIPELINE &nbsp;&mdash;&nbsp; <code style="font-size:10px">engine/run_pipeline()</code></div>
+  <div class="col-header" style="padding-left:16px">EXTERNAL APIs</div>
+
+  <!-- Inputs -->
+  <div class="inputs-wrap">
+    <div class="box exists">
+      <div class="box-title">23andMe .txt</div>
+      <div class="box-sub">rsid + genotype</div>
+    </div>
+    <div class="box exists">
+      <div class="box-title">VCF / .vcf.gz</div>
+      <div class="box-sub">clinical sequencing</div>
+    </div>
+    <div class="box exists">
+      <div class="box-title">CSV</div>
+      <div class="box-sub">chrom, pos, ref, alt</div>
+    </div>
+    <div class="box exists">
+      <div class="box-title">rsID list .txt</div>
+      <div class="box-sub">plain list</div>
+    </div>
+    <div style="margin-top:8px; text-align:right; padding-right:4px;">
+      <span style="font-size:20px; color:#334155">&rarr;</span>
+    </div>
+  </div>
+
+  <!-- Pipeline -->
+  <div class="pipeline-wrap">
+    <div class="step"><div class="step-num">1</div><div class="step-box"><div class="box exists"><div class="box-title">Validate</div><div class="box-sub">format, size, encoding</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">2</div><div class="step-box"><div class="box exists"><div class="box-title">Parse</div><div class="box-sub">normalize to chrom/pos/ref/alt/rsid, infer zygosity</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">3</div><div class="step-box"><div class="box exists"><div class="box-title">Quality filter</div><div class="box-sub">drop hom-ref, low GQ/DP, indels, failed calls</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">4</div><div class="step-box"><div class="box exists"><div class="box-title">Whitelist filter</div><div class="box-sub">keep only rsIDs in selected panel &mdash; default: ACMG SF v3.2 (81 genes)</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">5</div><div class="step-box"><div class="box exists"><div class="box-title">rsID resolution</div><div class="box-sub">23andMe rsIDs &rarr; genomic coordinates via Ensembl Variation API</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">6</div><div class="step-box"><div class="box exists"><div class="box-title">Deduplicate</div><div class="box-sub">key: (chrom, pos, ref, alt)</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">7</div><div class="step-box"><div class="box exists" style="border-color:#22d3ee; background:#082f49; color:#cffafe;"><div class="box-title" style="color:#22d3ee">Annotate &nbsp;<span style="font-size:10px; color:#164e63">&larr; calls all 4 external APIs &rarr;</span></div><div class="box-sub">consequence, clinical significance, population frequency</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">8</div><div class="step-box"><div class="box exists"><div class="box-title">Score + tier</div><div class="box-sub">&#128308; Critical &ge;500 &nbsp; &#128992; High &ge;100 &nbsp; &#128993; Medium &ge;30 &nbsp; &#128994; Low &lt;30 &nbsp; &#128309; Carrier</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">9</div><div class="step-box"><div class="box exists"><div class="box-title">Summarize</div><div class="box-sub">headline, consequence_plain, rarity_plain, action_hint</div></div></div></div>
+    <div class="arrow-down">&#8595;</div>
+    <div class="step"><div class="step-num">10</div><div class="step-box"><div class="box exists"><div class="box-title">Sort</div><div class="box-sub">by score descending</div></div></div></div>
+  </div>
+
+  <!-- External APIs -->
+  <div class="apis-wrap">
+    <div style="font-size:10px; color:#475569; padding: 8px 0 8px 0; font-style:italic">called per variant during step 7</div>
+    <div class="box external">
+      <div class="box-title">Ensembl VEP</div>
+      <div class="box-sub">functional consequence<br>MANE Select transcript<br>15 req/sec</div>
+    </div>
+    <div class="box external">
+      <div class="box-title">NCBI ClinVar</div>
+      <div class="box-sub">clinical classification<br>disease name + condition_key<br>3&ndash;10 req/sec</div>
+    </div>
+    <div class="box external">
+      <div class="box-title">gnomAD</div>
+      <div class="box-sub">population frequency<br>~800k genomes<br>GraphQL, r4 &rarr; r2.1</div>
+    </div>
+    <div class="box external" style="border-style: dashed; opacity:0.7;">
+      <div class="box-title">MyVariant.info</div>
+      <div class="box-sub">fallback aggregator<br>only when ClinVar + gnomAD both null</div>
+    </div>
+    <div style="font-size:10px; color:#475569; margin-top:8px; font-style:italic">also used in step 5:</div>
+    <div class="box external" style="opacity:0.7;">
+      <div class="box-title">Ensembl Variation</div>
+      <div class="box-sub">rsID &rarr; coordinates<br>15 req/sec</div>
+    </div>
+  </div>
+</div>
+
+<!-- Output -->
+<hr class="section-divider">
+<div class="section-label">ENGINE OUTPUT</div>
+<div style="max-width:500px; margin:0 auto;">
+  <div class="box output" style="text-align:center; padding:16px 20px;">
+    <div class="box-title" style="font-size:14px; margin-bottom:6px;">list[dict] &mdash; scored, ranked variants</div>
+    <div class="box-sub" style="font-size:11px; line-height:1.8">
+      variant_id &bull; genes &bull; clinvar &bull; condition_key &bull; gnomad_af<br>
+      score &bull; tier &bull; emoji &bull; headline &bull; consequence_plain<br>
+      rarity_plain &bull; action_hint &bull; carrier_note &bull; frequency_derived_label
+    </div>
+  </div>
+</div>
+
+<!-- Missing web layer -->
+<hr class="section-divider">
+<div class="section-label" style="color:#c2410c">&#9650; NOT BUILT YET &mdash; WEB LAYER</div>
+
+<div class="missing-grid">
+  <div class="box missing">
+    <div class="badge badge-missing">missing</div>
+    <div class="box-title">FastAPI</div>
+    <div class="box-sub">POST /analyze<br>accepts file upload<br>calls run_pipeline()<br>returns merged JSON</div>
+    <div class="owner-tag">owner: Hampton</div>
+  </div>
+  <div class="box missing">
+    <div class="badge badge-missing">missing</div>
+    <div class="box-title">Annotation cache</div>
+    <div class="box-sub">Postgres<br>keyed by (chrom,pos,ref,alt)<br>TTL 30 days<br>skips external API calls on repeat</div>
+    <div class="owner-tag">owner: Hampton</div>
+  </div>
+  <div class="box missing">
+    <div class="badge badge-missing">content missing</div>
+    <div class="box-title">Condition library</div>
+    <div class="box-sub">Postgres table<br>keyed by condition_key<br>schema exists<br>81 ACMG rows needed</div>
+    <div class="owner-tag">owner: Sasank</div>
+  </div>
+  <div class="box missing">
+    <div class="badge badge-missing">missing</div>
+    <div class="box-title">Frontend</div>
+    <div class="box-sub">React<br>upload screen<br>processing screen<br>results cards</div>
+    <div class="owner-tag">Tom (code) Rocky (design)</div>
+  </div>
+</div>
+<p class="gap-note">Annotation cache lookup happens before the engine runs. Condition library merge happens after the engine returns, before the API responds to the frontend.</p>
+
+<!-- V2 -->
+<hr class="section-divider">
+<div class="section-label" style="color:#7c3aed">&#9650; V2 &mdash; SUBSCRIPTION / RESEARCH TRACKING</div>
+
+<div class="v2-grid">
+  <div class="box v2">
+    <div class="badge badge-v2">V2</div>
+    <div class="box-title">User accounts</div>
+    <div class="box-sub">Authelia auth<br>registration + login<br>required before any V2 feature works</div>
+    <div class="owner-tag">owner: Hampton</div>
+  </div>
+  <div class="box v2">
+    <div class="badge badge-v2">V2</div>
+    <div class="box-title">Stored profiles</div>
+    <div class="box-sub">Postgres user_variants<br>variant list per user<br>persists between sessions</div>
+    <div class="owner-tag">owner: Hampton</div>
+  </div>
+  <div class="box v2">
+    <div class="badge badge-v2">V2</div>
+    <div class="box-title">PubMed nightly job</div>
+    <div class="box-sub">NCBI Entrez query<br>gene symbols from stored profile<br>new papers since last run<br>LLM summarizes each paper</div>
+    <div class="owner-tag">owner: Curtis</div>
+  </div>
+  <div class="box v2">
+    <div class="badge badge-v2">V2</div>
+    <div class="box-title">Research feed</div>
+    <div class="box-sub">results tab in UI<br>one entry per relevant paper<br>free: 1 preview<br>paid: full feed</div>
+    <div class="owner-tag">Tom (UI) Curtis (logic)</div>
+  </div>
+</div>
+
+<!-- Immediate blockers -->
+<hr class="section-divider">
+<div class="section-label">IMMEDIATE BLOCKERS</div>
+<div style="display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin-top:12px;">
+  <div class="box missing" style="border-color:#ef4444; background:#450a0a;">
+    <div class="box-title" style="color:#f87171;">&#9888; No URL</div>
+    <div class="box-sub">Hampton: FastAPI + Docker + K8s<br>Curtis: register domain<br><strong>blocks everything</strong></div>
+  </div>
+  <div class="box missing" style="border-color:#ef4444; background:#450a0a;">
+    <div class="box-title" style="color:#f87171;">&#9888; No condition library content</div>
+    <div class="box-sub">Sasank: write 4 rows<br>(BRCA1, TP53, LDLR, RYR1)<br><strong>blocks Rocky + Tom</strong></div>
+  </div>
+  <div class="box missing" style="border-color:#ef4444; background:#450a0a;">
+    <div class="box-title" style="color:#f87171;">&#9888; No branded email</div>
+    <div class="box-sub">Jeran: Google Workspace<br><strong>blocks outreach</strong></div>
+  </div>
+</div>
+
+</body>
+</html>
