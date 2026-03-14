@@ -1,0 +1,38 @@
+# Exclude everything that doesn't need to be in the Docker build context.
+# Keeps the build fast and the image clean.
+
+# Version control
+.git
+.gitignore
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+.mypy_cache
+
+# Development files
+*.env
+.env.*
+!.env.example
+
+# Docs and assets (not needed at runtime)
+docs/
+*.md
+*.html
+*.pdf
+*.xlsx
+
+# Test files
+tests/
+small_test.txt
+one_variant.txt
+
+# Junk
+.DS_Store
+ExportBlock*/
+u4u-engine*/
+u4unotionpage.zip
+generate_*.py

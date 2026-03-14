@@ -1,0 +1,19 @@
+# docker-compose.yml — local development and testing
+# Usage:
+#   cp .env.example .env        # fill in NCBI_API_KEY
+#   docker compose up --build
+#   curl http://localhost:8000/health
+#   curl -X POST http://localhost:8000/analyze -F "file=@your_file.vcf"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Mount data/ so you can update filter files without rebuilding the image.
+      # Remove this volume mount in production — bake data/ into the image instead.
+      - ./data:/app/data:ro
+    restart: unless-stopped
