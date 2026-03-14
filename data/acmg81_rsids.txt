@@ -277,3 +277,13 @@ rs193922700
 # ── TSC1 / TSC2 (tuberous sclerosis) ─────────────────────────────────────────
 rs587776644
 rs387906600
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ⚠️  TEST VARIANTS — NOT REAL ACMG RSIDS — DO NOT USE IN PRODUCTION ⚠️
+# These RSIDs are present in the Noah Jones 23andMe test file
+# (genome_Noah_Jones_v5_Full_20230322090041) and are added here solely to
+# verify the end-to-end filter pipeline produces a hit during QA testing.
+# Source file rsid / chr1 position confirmed in that genome file header.
+# Remove or gate behind TEST_MODE flag before any clinical/research use.
+# ══════════════════════════════════════════════════════════════════════════════
+rs548049170     # TEST ONLY — chr1:69869 from Noah Jones 23andMe QA file
