@@ -38,12 +38,12 @@ docs/           documentation
 
 | Area | Missing | Owner |
 |------|---------|-------|
-| Web API | FastAPI wrapper, `POST /analyze`, background worker | Hampton |
-| Database | Postgres schema, annotation cache, condition library table | Hampton |
-| Condition library | 81 ACMG SF rows (4 needed immediately) | Sasank |
+| Web API | Docker build, K8s deployment, public URL | Hampton |
+| Database | Postgres instance running (schema exists in `db/schema.sql`) | Hampton |
+| Condition library | 81 ACMG SF rows (4 needed immediately: BRCA1, TP53, LDLR, RYR1) | Sasank |
 | Frontend | Upload, processing, results screens | Tom (build) + Rocky (design) |
-| Infrastructure | Docker, K8s, domain, CI/CD auto-deploy | Hampton + Curtis |
-| Security/legal | Privacy policy, consent gate, security audit, LLC | Cane + Curtis |
+| Infrastructure | Domain registration, DNS, CI/CD auto-deploy | Hampton + Curtis |
+| Security/legal | Security audit execution, LLC incorporation | Cane + Curtis |
 
 ---
 
@@ -86,16 +86,17 @@ docs/           documentation
 ### Screen 3 — Results
 - Header: count + one-line summary
 - Filter chips: 🔴 Critical 🟠 High 🟡 VUS 🟢 Low 🔵 Carrier with counts
-- Default: Critical + High shown; others toggled off
-- Cards in score-descending order
+- Default: Critical + High shown; "For Your Records" section (medium/low/carrier) collapsed
 
-**Card collapsed:** emoji + tier badge, gene, headline, condition name, ClinVar badge
+**Layout:** single-column prioritized findings report — NOT a card grid. Findings are expandable rows with a colored left border (tier color). Two sections: "Needs Attention" (critical + high, always visible) and "For Your Records" (medium + low + carrier, collapsed by default). Full spec in `docs/frontend.md`.
 
-**Card expanded:** headline, `consequence_plain`, `zygosity_plain`, `rarity_plain`, `clinvar_plain`, `action_hint`, condition-specific guidance from condition library, source links (ClinVar, gnomAD, ACMG)
+**Row collapsed:** tier color border, tier badge, gene name, headline, action button
 
-**Carrier card:** blue styling, "You appear to be a carrier," `carrier_note`, condition name
+**Row expanded:** headline, `consequence_plain`, `zygosity_plain`, `rarity_plain`, `clinvar_plain`, `action_hint`, condition-specific guidance from condition library, source links (ClinVar, gnomAD, ACMG)
 
-**VUS card:** "uncertain significance" header, `consequence_plain`, `rarity_plain`, `frequency_derived_label`
+**Carrier row:** blue left border, "You appear to be a carrier," `carrier_note`, condition name
+
+**VUS row:** yellow left border, "uncertain significance" language, `consequence_plain`, `rarity_plain`, `frequency_derived_label`
 
 **Disclaimer (persistent):** "This is not medical advice. Discuss significant findings with a healthcare provider."
 
@@ -128,4 +129,4 @@ Roadmap: `docs/roadmap.md`
 
 1. **Sasank** — share the condition library CSV (even 4 rows) in Slack or Drive so Rocky can design against real disease names and Tom can use real `action_guidance` text instead of placeholder copy
 2. **Hampton** — share the K8s cluster's external IP or hostname so Curtis can register the domain and point DNS before the API is deployed; these can happen in parallel
-3. **Tom + Rocky** — design one Critical card and one Carrier card using the UI spec above and `docs/interpretation.md` tiers; agree on collapsed + expanded states before Tom writes any React
+3. **Tom + Rocky** — read `docs/frontend.md` for the full UI spec (expandable rows, not cards); Rocky designs collapsed + expanded states for one Critical finding and one Carrier finding before Tom writes any code
