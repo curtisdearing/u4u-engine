@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>U4U Genetic Outreach Strategy</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; background: #fff; color: #222; padding: 24px; }
+
+  .page { max-width: 1100px; margin: 0 auto; }
+
+  /* Section labels on left */
+  .row { display: flex; gap: 0; margin-bottom: 0; }
+  .section-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 11px;
+    font-weight: bold;
+    color: #555;
+    text-align: center;
+    padding: 8px 4px;
+    min-width: 22px;
+    border-right: 2px solid #ccc;
+    background: #f9f9f9;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .section-body { flex: 1; padding: 12px 16px; border: 1.5px solid #ccc; border-left: none; margin-bottom: -1px; }
+
+  /* Banner headers */
+  .banner {
+    background: #c084fc;
+    color: #fff;
+    text-align: center;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+  .banner.green { background: #6ee7b7; color: #065f46; }
+  .banner.blue  { background: #93c5fd; color: #1e3a5f; }
+  .banner.orange { background: #fbbf24; color: #78350f; }
+
+  /* Gene/condition boxes */
+  .condition-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .condition-col { border: 1.5px solid #a855f7; border-radius: 6px; padding: 8px; }
+  .condition-col h4 { font-size: 11px; font-weight: bold; margin-bottom: 6px; color: #7e22ce; text-align: center; }
+  .gene-box {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 4px 6px;
+    margin-bottom: 4px;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .gene-box strong { display: block; font-size: 11px; }
+
+  /* Platform columns */
+  .platform-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .platform-col { border: 1.5px solid #d1d5db; border-radius: 6px; padding: 8px; }
+  .platform-col h4 { font-size: 11px; font-weight: bold; text-align: center; margin-bottom: 6px; }
+  .community-tag {
+    display: block;
+    border-radius: 12px;
+    padding: 3px 8px;
+    margin-bottom: 4px;
+    text-align: center;
+    font-size: 11px;
+  }
+  .reddit-tag { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }
+  .fb-tag     { background: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; }
+  .other-tag  { background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; }
+
+  /* Flowchart */
+  .flow-wrap { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+  .flow-node {
+    border: 1.5px solid #6ee7b7;
+    border-radius: 6px;
+    background: #f0fdf4;
+    padding: 6px 10px;
+    text-align: center;
+    font-size: 11px;
+    min-width: 90px;
+    max-width: 120px;
+    line-height: 1.4;
+  }
+  .flow-diamond {
+    border: 1.5px solid #fbbf24;
+    background: #fefce8;
+    transform: none;
+    padding: 6px 10px;
+    text-align: center;
+    font-size: 11px;
+    min-width: 90px;
+    border-radius: 4px;
+    line-height: 1.4;
+    font-style: italic;
+  }
+  .flow-arrow { align-self: center; font-size: 16px; color: #6b7280; line-height: 1; }
+  .flow-label { font-size: 10px; color: #6b7280; align-self: center; }
+
+  .flow-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .flow-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; }
+
+  /* Conversion funnel */
+  .funnel-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .funnel-box {
+    border: 1.5px solid #93c5fd;
+    background: #eff6ff;
+    border-radius: 6px;
+    padding: 6px 12px;
+    text-align: center;
+    font-size: 11px;
+    min-width: 80px;
+    line-height: 1.4;
+  }
+  .funnel-diamond {
+    border: 1.5px solid #fbbf24;
+    background: #fefce8;
+    border-radius: 4px;
+    padding: 6px 12px;
+    text-align: center;
+    font-size: 11px;
+    min-width: 80px;
+    font-style: italic;
+  }
+  .funnel-highlight {
+    border: 2px solid #a855f7;
+    background: #faf5ff;
+    font-weight: bold;
+  }
+  .arrow { color: #6b7280; font-size: 14px; align-self: center; }
+  .arrow-label { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .arrow-label span { font-size: 10px; color: #9ca3af; }
+
+  /* Tool grids */
+  .tool-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tool-box {
+    border: 1.5px solid #d1d5db;
+    border-radius: 6px;
+    padding: 6px 12px;
+    text-align: center;
+    font-size: 11px;
+    background: #f9fafb;
+    min-width: 90px;
+  }
+  .tool-box strong { display: block; font-size: 11px; margin-bottom: 2px; }
+
+  /* Note boxes */
+  .note {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 10px;
+    color: #78350f;
+    max-width: 160px;
+    line-height: 1.4;
+  }
+  .note.gray { background: #f9fafb; border-color: #e5e7eb; color: #374151; }
+
+  .sub-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+  h3.section-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: #4b5563;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 4px;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- TOP BANNER -->
+  <div class="banner" style="font-size:16px; padding:10px 20px; margin-bottom:0;">U4U Genetic Outreach Strategy</div>
+
+  <!-- SECTION 1: Target Conditions + Platforms -->
+  <div class="row">
+    <div class="section-label">Identify Pain Points</div>
+    <div class="section-body">
+      <div class="condition-grid">
+        <div class="condition-col">
+          <h4>Hereditary Risk</h4>
+          <div class="gene-box"><strong>BRCA1 / BRCA2</strong>Hereditary breast &amp; ovarian cancer</div>
+          <div class="gene-box"><strong>MLH1 / MSH2 / MSH6</strong>Lynch syndrome (colorectal)</div>
+          <div class="gene-box"><strong>TP53</strong>Li-Fraumeni syndrome</div>
+          <div class="gene-box"><strong>LDLR / PCSK9 / APOB</strong>Familial hypercholesterolemia</div>
+          <div class="gene-box"><strong>RYR1 / CACNA1S</strong>Malignant hyperthermia</div>
+        </div>
+        <div class="condition-col">
+          <h4>Metabolic / Wellness</h4>
+          <div class="gene-box"><strong>APOE ε4 (rs429358, rs7412)</strong>Alzheimer's risk, statin response</div>
+          <div class="gene-box"><strong>CYP2C19 / SLCO1B1</strong>Drug metabolism (clopidogrel, statins)</div>
+          <div class="gene-box"><strong>MTHFR (rs1801133)</strong>Folate metabolism, cardiovascular</div>
+          <div class="gene-box"><strong>LPA (rs10455872)</strong>Cardiovascular risk</div>
+          <div class="gene-box"><strong>FOXO3 / TERT</strong>Longevity variants</div>
+        </div>
+      </div>
+
+      <!-- Platform targeting -->
+      <div class="platform-grid">
+        <div class="platform-col">
+          <h4>Reddit</h4>
+          <span class="community-tag reddit-tag">r/23andMe</span>
+          <span class="community-tag reddit-tag">r/Ancestry</span>
+          <span class="community-tag reddit-tag">r/BRCA</span>
+          <span class="community-tag reddit-tag">r/GeneticCounseling</span>
+          <span class="community-tag reddit-tag">r/FamilialHypercholest.</span>
+          <span class="community-tag reddit-tag">r/Alzheimers</span>
+          <span class="community-tag reddit-tag">r/longevity</span>
+        </div>
+        <div class="platform-col">
+          <h4>Facebook</h4>
+          <span class="community-tag fb-tag">BRCA Sisterhood</span>
+          <span class="community-tag fb-tag">FH Foundation Community</span>
+          <span class="community-tag fb-tag">Alzheimer's Caregivers</span>
+          <span class="community-tag fb-tag">Lynch Syndrome Community</span>
+          <span class="community-tag fb-tag">Pharmacogenomics PGx</span>
+          <span class="community-tag fb-tag">DTC Genetics Discussion</span>
+        </div>
+        <div class="platform-col">
+          <h4>Other Forum / Traffic</h4>
+          <span class="community-tag other-tag">DNAforums.com</span>
+          <span class="community-tag other-tag">GeneticGenealogyBlog</span>
+          <span class="community-tag other-tag">FORCE (BRCA org)</span>
+          <span class="community-tag other-tag">Biohacking.com</span>
+          <span class="community-tag other-tag">Quantified Self forums</span>
+          <span class="community-tag other-tag">PGx patient forums</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: Engagement Strategy -->
+  <div class="row">
+    <div class="section-label">Build Trust Slowly</div>
+    <div class="section-body">
+      <div class="banner green">Engagement Strategy</div>
+
+      <div class="flow-row">
+        <div class="flow-col">
+          <div class="flow-diamond">Authenticity?</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
+          <div class="flow-label" style="margin-left:4px;">Yes ↓</div>
+          <div class="flow-label" style="margin-left:4px; margin-top:30px;">No ↓</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- YES path -->
+        <div>
+          <h3 class="section-title">✓ Authentic Path</h3>
+          <div class="sub-row">
+            <div class="flow-node">Publish variant research — answer "what does this SNP mean?" questions directly</div>
+            <div class="flow-node">Identify people who got 23andMe results and don't know what to do with them</div>
+            <div class="flow-node">Ask hesitant people why they haven't dug into their raw data. Build the relationship.</div>
+          </div>
+          <div class="sub-row" style="margin-top:10px;">
+            <div class="flow-node" style="background:#faf5ff; border-color:#a855f7;">Share what U4U found in BRCA / APOE / LPA variants — show the actual output</div>
+            <div class="flow-node">Show research updates: "new paper published on BRCA2 rs80357348 — here's what changed"</div>
+          </div>
+        </div>
+
+        <!-- NO path -->
+        <div>
+          <h3 class="section-title">⚠ Paid / Accelerated (use with caution)</h3>
+          <div class="sub-row">
+            <div class="note">Seed posts asking "what service interprets raw 23andMe data beyond ancestry?" then answer from separate accounts. Works. Ethically gray.</div>
+            <div class="note">Run promoted posts in r/23andMe, r/BRCA. Reddit allows condition-targeted ads. Disclose properly.</div>
+            <div class="note">Partner with genetic counselors who can authentically recommend U4U as a pre-consult tool. Pay them fairly.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #6ee7b7; border-radius: 6px; font-size: 11px;">
+        <strong>Core message in every thread:</strong> "You already paid for your genome. The raw file has thousands of variants with clinical meaning that no one told you about. U4U reads it."
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: Conversion Funnel -->
+  <div class="row">
+    <div class="section-label">Optimize Funnel</div>
+    <div class="section-body">
+      <div class="banner blue">Conversion Funnel</div>
+
+      <div class="funnel-row" style="margin-bottom:14px;">
+        <div class="funnel-box">User already has a genome file<br><span style="font-size:10px;color:#6b7280;">(23andMe, Ancestry, Sequencing.com)</span></div>
+        <div class="arrow">→</div>
+        <div class="funnel-diamond">First time<br>visitor?</div>
+        <div style="display:flex; flex-direction:column; gap:4px; font-size:10px; color:#6b7280; align-self:center;">
+          <span>Yes →</span>
+          <span style="margin-top:20px;">No ↓</span>
+        </div>
+        <div class="funnel-box">Education page: what is a raw genome file, what variants matter</div>
+        <div class="arrow">→</div>
+        <div class="funnel-box funnel-highlight">Upload .txt / .vcf / .csv</div>
+        <div class="arrow">→</div>
+        <div class="funnel-box">U4U engine processes<br><span style="font-size:10px;color:#6b7280;">~30s in memory, discarded</span></div>
+        <div class="arrow">→</div>
+        <div class="funnel-box funnel-highlight" style="border-color:#6ee7b7; background:#f0fdf4;">Results report<br><span style="font-size:10px;color:#6b7280;">tiered, plain English</span></div>
+        <div class="arrow">→</div>
+        <div class="funnel-box funnel-highlight">Email capture<br><span style="font-size:10px;color:#6b7280;">required for full report</span></div>
+        <div class="arrow">→</div>
+        <div class="funnel-box" style="border-color:#a855f7; background:#faf5ff; font-weight:bold;">Email List !!!</div>
+      </div>
+
+      <div class="funnel-row">
+        <div class="funnel-box" style="background:#fef3c7; border-color:#fbbf24;">Resell sequencing<br><span style="font-size:10px;color:#78350f;">Sequencing.com affiliate — user buys WGS, we interpret it</span></div>
+        <div class="arrow">→</div>
+        <div class="funnel-box">Their VCF</div>
+        <div class="arrow">→</div>
+        <div class="funnel-box funnel-highlight">Our onboarding</div>
+        <div class="arrow">→</div>
+        <div class="funnel-box" style="border-color:#a855f7; background:#faf5ff; font-weight:bold;">Subscription<br><span style="font-size:10px;">V2 research alerts</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: Analytics -->
+  <div class="row">
+    <div class="section-label">Measure Results</div>
+    <div class="section-body">
+      <div class="banner orange">Analytics + Tracking</div>
+      <div class="tool-grid">
+        <div class="tool-box"><strong>Mailchimp</strong>Email list + drip campaigns</div>
+        <div class="tool-box"><strong>GA4</strong>Upload funnel drop-off analysis</div>
+        <div class="tool-box"><strong>Ahrefs / SemRush</strong>Organic search — rank for "interpret 23andMe raw data"</div>
+        <div class="tool-box"><strong>Email Pixel</strong>Open + click rates on report delivery</div>
+        <div class="tool-box"><strong>JS Heatmap</strong>Results page scroll depth — what cards do they read?</div>
+        <div class="tool-box"><strong>PostHog</strong>Self-hosted product analytics (HIPAA-adjacent safe)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: Testing -->
+  <div class="row">
+    <div class="section-label">Iterate and Refine</div>
+    <div class="section-body">
+      <div class="banner" style="background:#818cf8;">Testing + Iteration</div>
+      <div class="tool-grid">
+        <div class="tool-box"><strong>A/B: Upload CTA</strong>"Upload your raw DNA file" vs "See what your genome actually means"</div>
+        <div class="tool-box"><strong>A/B: Gate point</strong>Email before results vs email to unlock full report</div>
+        <div class="tool-box"><strong>Behavior</strong>Hotjar / FullStory — where do users rage-click on the results page?</div>
+        <div class="tool-box"><strong>Cohort tracking</strong>Amplitude / Mixpanel — do BRCA uploads convert to subscription more than APOE?</div>
+        <div class="tool-box"><strong>Campaign tracking</strong>UTM per community (r/23andMe vs BRCA Facebook vs DNAforums)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
