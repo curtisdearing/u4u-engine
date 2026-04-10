@@ -19,23 +19,39 @@ WORKDIR /build
 COPY engine/ engine/
 RUN pip install --no-cache-dir --prefix=/install "engine/[vcf]"
 
-# Install FastAPI and uvicorn on top of the engine install
+# Install FastAPI, uvicorn, Celery, and Redis on top of the engine install
 RUN pip install --no-cache-dir --prefix=/install \
     "fastapi>=0.110" \
     "uvicorn[standard]>=0.29" \
-    "python-multipart>=0.0.9"
+    "python-multipart>=0.0.9" \
+    "celery>=5.3" \
+    "redis>=5.0" \
+    "reportlab>=4.1" \
+    "sqlalchemy[asyncio]>=2.0" \
+    "asyncpg>=0.29" \
+    "pydantic>=2.6"
 
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
 
-# Runtime libraries needed by pysam (shared objects, not build tools)
+# Runtime libraries needed by pysam + samtools + ExpansionHunter
 RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g \
     libbz2-1.0 \
     liblzma5 \
     libcurl4 \
+    samtools \
+    wget \
  && rm -rf /var/lib/apt/lists/*
+
+# Install ExpansionHunter binary (v5.0.0, linux x86_64)
+RUN wget -q https://github.com/Illumina/ExpansionHunter/releases/download/v5.0.0/ExpansionHunter-v5.0.0-linux_x86_64.tar.gz \
+ && tar -xzf ExpansionHunter-v5.0.0-linux_x86_64.tar.gz \
+ && mv ExpansionHunter-v5.0.0-linux_x86_64/bin/ExpansionHunter /usr/local/bin/ \
+ && chmod +x /usr/local/bin/ExpansionHunter \
+ && rm -rf ExpansionHunter-v5.0.0-linux_x86_64 ExpansionHunter-v5.0.0-linux_x86_64.tar.gz
+ENV EXPANSION_HUNTER_PATH=/usr/local/bin/ExpansionHunter
 
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local

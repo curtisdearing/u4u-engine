@@ -18,6 +18,10 @@ Pipeline steps
   6.  deduplicate               — key by (chrom, pos, ref, alt)
   7.  annotate_variant (loop)  — VEP + ClinVar + gnomAD + MyVariant fallback
   8.  score_variant  (loop)    — clinical score, tier, zygosity, carrier note
+  8b. map_kegg_pathways         — KEGG pathway mapping for gene hits
+  8c. call_ar_cag_repeat        — ExpansionHunter STR calling (if BAM provided)
+  8d. map_receptors             — receptor expression + isoform prediction
+  8e. calculate_prs             — polygenic risk scores for complex traits
   9.  generate_summary (loop)  — plain-English consumer output
   10. sort by score descending
 
@@ -29,7 +33,10 @@ Public interface
         filters: list[str] = (),
         data_dir: str = "data",
         progress_callback: callable = None,
-    ) -> list[dict]
+        bam_path: str = None,
+        sex: str = None,
+        ancestry: str = "Unknown",
+    ) -> dict
 
     annotate_variant(v: dict) -> dict   — usable alone for cache-aware workers
 """
@@ -47,6 +54,18 @@ from .annotators.myvariant import fetch_myvariant
 from .scoring  import score_variant
 from .summary  import generate_summary
 
+# V3 annotators
+from .annotators.kegg_mapper import map_variants_to_pathways, generate_pathway_summary
+from .annotators.receptor_mapper import map_receptors, generate_receptor_summary
+from .annotators.prs_calculator import calculate_prs
+
+# V3 STR caller (optional — requires BAM + ExpansionHunter binary)
+try:
+    from .repeat_callers.expansion_hunter import call_ar_cag_repeat
+    _HAS_EXPANSION_HUNTER = True
+except ImportError:
+    _HAS_EXPANSION_HUNTER = False
+
 
 def run_pipeline(
     file_bytes: bytes,
@@ -54,7 +73,11 @@ def run_pipeline(
     filters: list = (),
     data_dir: str = "data",
     progress_callback=None,
-) -> list[dict]:
+    # V3 parameters
+    bam_path: str = None,
+    sex: str = None,
+    ancestry: str = "Unknown",
+) -> dict:
     """
     Run the full variant analysis pipeline.
 
@@ -72,12 +95,22 @@ def run_pipeline(
     progress_callback : callable | None
         Optional function called as progress_callback(step: str, pct: int).
 
+    bam_path : str | None
+        Path to BAM/CRAM file for ExpansionHunter STR calling. Optional.
+    sex : str | None
+        Biological sex ('M' or 'F'). Required if bam_path is provided.
+    ancestry : str
+        Ancestry label for PRS adjustment and CAG repeat normalization.
+
     Returns
     -------
-    list[dict]
-        Variants sorted by score descending. Each dict contains all
-        annotation, scoring, and summary fields. See annotate_variant()
-        and score_variant() for the full field list.
+    dict
+        V3 result dict with keys:
+          - 'variants': list[dict] sorted by score descending
+          - 'pathway_summary': KEGG pathway analysis
+          - 'receptor_genetics': receptor expression + isoform predictions
+          - 'prs_profile': polygenic risk scores
+          - 'ar_cag_repeat': STR analysis (or None)
     """
     def _progress(step: str, pct: int):
         if progress_callback:
@@ -157,11 +190,56 @@ def run_pipeline(
         })
         final_results.append(combined)
 
+    # ── Step 8b: KEGG Pathway Mapping ──────────────────────────────────────
+    _progress("Mapping KEGG pathways", 92)
+    all_genes = []
+    for r in final_results:
+        genes = r.get("genes", [])
+        if isinstance(genes, str):
+            genes = [genes]
+        all_genes.extend(genes)
+    all_genes = list(set(g for g in all_genes if g))
+
+    pathway_hits = map_variants_to_pathways(all_genes)
+    pathway_summary_text = generate_pathway_summary(pathway_hits)
+
+    # ── Step 8c: AR CAG Repeat (if BAM provided) ──────────────────────────
+    ar_cag_result = None
+    if bam_path and _HAS_EXPANSION_HUNTER:
+        _progress("Running ExpansionHunter STR analysis", 94)
+        try:
+            ar_cag_result = call_ar_cag_repeat(bam_path, sex=sex, ancestry=ancestry)
+        except Exception:
+            ar_cag_result = None  # Graceful degradation
+
+    # ── Step 8d: Receptor Genetics ─────────────────────────────────────────
+    _progress("Predicting receptor expression", 96)
+    receptor_profiles = map_receptors(final_results)
+    receptor_summary_text = generate_receptor_summary(receptor_profiles)
+
+    # ── Step 8e: Polygenic Risk Scores ─────────────────────────────────────
+    _progress("Calculating polygenic risk scores", 98)
+    prs_profile = calculate_prs(final_results, ancestry=ancestry)
+
     # ── Step 10: Sort ────────────────────────────────────────────────────────
     final_results.sort(key=lambda x: x["score"], reverse=True)
 
     _progress("Complete", 100)
-    return final_results
+
+    # ── V3 Result Assembly ─────────────────────────────────────────────────
+    return {
+        "variants": final_results,
+        "pathway_summary": {
+            "pathways_hit": pathway_hits,
+            "summary_text": pathway_summary_text,
+        },
+        "receptor_genetics": {
+            "receptor_profiles": receptor_profiles,
+            "summary_text": receptor_summary_text,
+        },
+        "prs_profile": prs_profile,
+        "ar_cag_repeat": ar_cag_result,
+    }
 
 
 def annotate_variant(v: dict) -> dict:
