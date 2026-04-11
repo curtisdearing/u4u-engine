@@ -37,7 +37,14 @@ export function VariantCard({ variant }: VariantCardProps) {
       <div className="px-5 pb-4 space-y-2 text-sm text-zinc-600">
         <p>{variant.consequence_plain}</p>
         <p>{variant.rarity_plain}</p>
+        {variant.frequency_derived_label && (
+          <p className="text-zinc-500 italic">{variant.frequency_derived_label}</p>
+        )}
         {variant.clinvar_plain && <p>{variant.clinvar_plain}</p>}
+        {variant.zygosity_plain && <p>{variant.zygosity_plain}</p>}
+        {variant.carrier_note && (
+          <p className="text-amber-700 font-medium">{variant.carrier_note}</p>
+        )}
       </div>
 
       {/* Action hint */}

@@ -153,8 +153,9 @@ export default function UploadPage() {
 
       {/* Privacy notice */}
       <p className="text-center text-xs text-zinc-400">
-        Genome files are encrypted in transit and at rest and are automatically
-        deleted within 24 hours of job completion.
+        Genome files are encrypted in transit and held in memory only during
+        processing. They are never written to disk and are discarded as soon as
+        your job completes.
       </p>
     </div>
   );

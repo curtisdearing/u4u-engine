@@ -27,7 +27,7 @@ export default function JobStatusPage() {
           router.push(`/jobs/${jobId}/results`);
         } else if (data.status === "failed") {
           clearInterval(intervalRef.current!);
-          setError(data.error_message ?? "The analysis job failed. Please try again.");
+          setError(data.error ?? "The analysis job failed. Please try again.");
         }
       } catch (err: unknown) {
         clearInterval(intervalRef.current!);
@@ -43,8 +43,8 @@ export default function JobStatusPage() {
     };
   }, [jobId, router]);
 
-  const progress = status?.progress_pct ?? 0;
-  const currentStep = status?.progress_step ?? "";
+  const progress = status?.progress?.pct ?? 0;
+  const currentStep = status?.progress?.step ?? "";
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
