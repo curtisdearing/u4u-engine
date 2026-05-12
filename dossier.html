@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PeptOdyssey — Personalized Peptide Dossier</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0d1117;
+    --ink-2: #3a3f4a;
+    --ink-3: #6b7280;
+    --ink-4: #9ca3af;
+    --surface: #ffffff;
+    --surface-2: #f5f4f0;
+    --surface-3: #edecea;
+    --surface-4: #e3e1db;
+    --accent: #1a6b4a;
+    --accent-light: #e1f3eb;
+    --accent-mid: #2d8f61;
+    --accent-dark: #0f4530;
+    --blue: #1e4d8c;
+    --blue-light: #e8eef8;
+    --blue-mid: #3d6499;
+    --amber: #92550a;
+    --amber-light: #fdf3e3;
+    --red: #8b2020;
+    --red-light: #fbeaea;
+    --border: #dbd9d3;
+    --border-light: #edecea;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
+
+  @media print {
+    body { print-color-adjust: exact; -webkit-print-color-adjust: exact; background: white; }
+    .no-print { display: none !important; }
+    .page { margin: 0 auto !important; border: none !important; page-break-after: always; }
+    .page:last-of-type { page-break-after: auto; }
+  }
+
+  body { font-family: 'Outfit', sans-serif; font-size: 13px; line-height: 1.6; color: var(--ink); background: var(--surface-2); }
+
+  .page { width: 794px; min-height: 1123px; margin: 32px auto; background: var(--surface); border: 1px solid var(--border); position: relative; overflow: hidden; }
+
+  /* ─────────── HEADER ─────────── */
+  .header { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 36px 40px 28px; background: var(--blue-mid); }
+  .brand { display: flex; flex-direction: column; gap: 4px; }
+  .brand-name { font-family: 'DM Serif Display', serif; font-size: 32px; letter-spacing: -0.5px; color: #fff; line-height: 1; }
+  .brand-tagline { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.6); font-weight: 500; }
+  .report-meta { display: grid; grid-template-columns: auto auto; gap: 4px 16px; align-items: baseline; }
+  .meta-row { display: contents; }
+  .meta-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 500; text-align: right; }
+  .meta-value { font-family: 'DM Mono', monospace; color: #fff; font-size: 12px; }
+
+  /* ─────────── BODY ─────────── */
+  .body { padding: 28px 40px 36px; display: flex; flex-direction: column; gap: 24px; }
+
+  /* Section header: numbered, bold, sets hierarchy */
+  .section-head { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; border-bottom: 1.5px solid var(--ink); }
+  .section-num { font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1; color: var(--accent); }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1.1; color: var(--ink); }
+  .section-sub { margin-left: auto; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+
+  .panel-label { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--ink-3); margin-bottom: 8px; }
+
+  /* ─────────── §1 PATIENT INPUTS ─────────── */
+  .patient-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .patient-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; background: var(--surface); }
+  .patient-card.full { grid-column: 1 / -1; }
+  .patient-card.goals { background: var(--accent-light); border-color: var(--accent); border-width: 1.5px; grid-column: 1 / -1; }
+  .patient-card.goals .panel-label { color: var(--accent-dark); }
+
+  .demo-row { display: flex; flex-wrap: wrap; gap: 6px 24px; }
+  .demo-item { display: flex; flex-direction: column; gap: 1px; }
+  .demo-item .k { font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .demo-item .v { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--ink); }
+
+  .goals-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .goal-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; color: var(--ink); }
+  .goal-num { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .goal-text { font-weight: 500; }
+
+  .input-status { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-bottom: 8px; }
+  .input-status.complete { background: var(--accent-light); color: var(--accent); }
+  .input-status.partial  { background: var(--amber-light); color: var(--amber); }
+  .input-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+  .input-status.complete::before { background: var(--accent-mid); }
+  .input-status.partial::before  { background: #d4890a; }
+
+  .variant-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .variant-table th, .variant-table td { text-align: left; padding: 5px 8px; font-size: 11.5px; border-bottom: 0.5px solid var(--border-light); }
+  .variant-table th { font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; border-bottom: 1px solid var(--border); }
+  .variant-table td.gene { font-weight: 600; color: var(--ink); }
+  .variant-table td.rsid, .variant-table td.geno { font-family: 'DM Mono', monospace; color: var(--ink-2); }
+  .variant-table td.note { color: var(--ink-2); }
+
+  .hx-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+  .hx-list li { font-size: 12px; color: var(--ink-2); position: relative; padding-left: 12px; }
+  .hx-list li::before { content: '•'; position: absolute; left: 2px; color: var(--ink-3); }
+
+  .completeness-note { background: var(--surface-2); border-left: 3px solid var(--accent); padding: 10px 14px; font-size: 11.5px; color: var(--ink-2); line-height: 1.55; border-radius: 0 var(--radius) var(--radius) 0; }
+  .completeness-note strong { color: var(--ink); }
+
+  /* ─────────── §2 SAFETY ─────────── */
+  .safety-block { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .safety-block + .safety-block { margin-top: 10px; }
+  .safety-header { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+  .safety-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-red { background: #c94040; }
+  .dot-amber { background: #d4890a; }
+  .dot-green { background: var(--accent-mid); }
+  .safety-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+  .safety-title.danger { color: var(--red); }
+  .safety-title.warn { color: var(--amber); }
+  .safety-title.ok { color: var(--accent); }
+  .safety-count { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 10.5px; color: var(--ink-3); }
+  .safety-items { padding: 4px 0; }
+  .safety-item { display: grid; grid-template-columns: 14px 1fr; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--border-light); font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+  .safety-item:last-child { border-bottom: none; }
+  .safety-item .sev { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .safety-item .sev.danger { background: #c94040; }
+  .safety-item .sev.warn   { background: #d4890a; }
+  .safety-item .sev.ok     { background: var(--accent-mid); }
+  .safety-item .source { display: block; margin-top: 3px; font-size: 10.5px; color: var(--ink-3); font-style: italic; }
+  .safety-item .source::before { content: 'Source: '; font-style: normal; color: var(--ink-4); letter-spacing: 0.05em; text-transform: uppercase; font-size: 9.5px; font-weight: 600; }
+
+  /* ─────────── §3 GOAL → PEPTIDES ─────────── */
+  .goal-flow { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; background: var(--surface); display: grid; grid-template-columns: 220px auto 1fr; gap: 18px; align-items: stretch; }
+  .goal-flow + .goal-flow { margin-top: 14px; }
+
+  .goal-card { background: var(--blue-light); border: 1px solid var(--blue); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .goal-card .gc-label { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue); font-weight: 700; }
+  .goal-card .gc-title { font-family: 'DM Serif Display', serif; font-size: 18px; line-height: 1.2; color: var(--ink); }
+  .goal-card .gc-rationale { font-size: 11px; color: var(--ink-2); line-height: 1.5; padding-top: 6px; border-top: 0.5px solid rgba(30,77,140,0.3); }
+
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--blue); font-size: 24px; }
+  .arrow svg { width: 28px; height: 28px; }
+
+  .peptide-stack-list { display: flex; flex-direction: column; gap: 8px; }
+  .peptide-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 14px; background: var(--surface); }
+  .peptide-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .peptide-card-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .peptide-card-status { font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 600; letter-spacing: 0.02em; }
+  .status-fda { background: var(--accent-light); color: var(--accent); }
+  .status-inv { background: var(--amber-light); color: var(--amber); }
+  .status-cosm { background: var(--blue-light); color: var(--blue); }
+
+  .dose-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; margin-bottom: 6px; }
+  .dose-cell { display: flex; flex-direction: column; gap: 0; }
+  .dose-cell .dl { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .dose-cell .dv { font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--ink); }
+  .dose-cell .dv.start { color: var(--accent); font-weight: 500; }
+  .dose-cell .dv.max   { color: var(--red); font-weight: 500; }
+
+  .titration { font-size: 11px; color: var(--ink-2); padding: 5px 0 5px; border-top: 0.5px solid var(--border-light); }
+  .titration::before { content: 'Titration: '; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+
+  .peptide-source { font-size: 10.5px; color: var(--ink-3); margin-top: 4px; padding-top: 6px; border-top: 0.5px solid var(--border-light); }
+  .peptide-source .src-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; color: var(--ink-4); display: inline-block; margin-right: 4px; }
+
+  .peptide-notes { margin-top: 6px; font-size: 11.5px; color: var(--ink-2); line-height: 1.55; }
+  .peptide-notes .nl { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; display: inline-block; margin-right: 4px; }
+  .peptide-notes .nsrc { display: block; font-size: 10px; color: var(--ink-3); font-style: italic; margin-top: 2px; }
+
+  /* ─────────── FOOTER ─────────── */
+  .footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 40px; border-top: 1px solid var(--border); background: var(--surface-2); margin-top: auto; }
+  .footer-brand { font-family: 'DM Serif Display', serif; font-size: 14px; color: var(--ink-2); }
+  .footer-note { font-size: 9.5px; color: var(--ink-3); text-align: center; max-width: 440px; line-height: 1.4; }
+  .footer-url { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-3); }
+
+  /* ─────────── PRINT BAR ─────────── */
+  .print-bar { width: 794px; margin: 0 auto 12px; display: flex; justify-content: flex-end; }
+  .btn { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 18px; border-radius: 6px; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--ink-2); transition: background 0.15s; }
+  .btn:hover { background: var(--surface-3); }
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <button class="btn" onclick="window.print()">Print / Save PDF</button>
+</div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-name">PeptOdyssey</div>
+      <div class="brand-tagline">Personalized peptide dossier &middot; for clinician &amp; patient</div>
+    </div>
+    <div class="report-meta">
+      <div class="meta-row">
+        <span class="meta-label">Patient</span>
+        <span class="meta-value" id="meta-patient"></span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Analysis Date</span>
+        <span class="meta-value" id="meta-date"></span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Report ID</span>
+        <span class="meta-value" id="meta-reportid"></span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Prepared For</span>
+        <span class="meta-value" id="meta-clinic"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- ═══════ §1 PATIENT INPUTS ═══════ -->
+    <section>
+      <div class="section-head">
+        <span class="section-num">1</span>
+        <h2 class="section-title">Patient Information</h2>
+        <span class="section-sub">Inputs used in analysis</span>
+      </div>
+
+      <div class="patient-grid" style="margin-top: 14px;">
+
+        <div class="patient-card full">
+          <div class="panel-label">Demographics</div>
+          <div class="demo-row" id="demo-row"></div>
+        </div>
+
+        <div class="patient-card goals">
+          <div class="panel-label">Patient health goals</div>
+          <div class="goals-list" id="goals-list"></div>
+        </div>
+
+        <div class="patient-card full">
+          <div class="panel-label">Genetic data on file</div>
+          <span class="input-status" id="genetics-status"></span>
+        </div>
+
+        <div class="patient-card">
+          <div class="panel-label">Medical history</div>
+          <ul class="hx-list" id="hx-list"></ul>
+        </div>
+
+        <div class="patient-card">
+          <div class="panel-label">Family history</div>
+          <ul class="hx-list" id="fhx-list"></ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ═══════ §2 SAFETY ═══════ -->
+    <section>
+      <div class="section-head">
+        <span class="section-num">2</span>
+        <h2 class="section-title">Safety review</h2>
+        <span class="section-sub">Contraindications &amp; cautions</span>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <div class="safety-block">
+          <div class="safety-items" id="safety-items"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ §3 GOAL → PEPTIDES ═══════ -->
+    <section>
+      <div class="section-head">
+        <span class="section-num">3</span>
+        <h2 class="section-title">Possible Peptide Interventions</h2>
+        <span class="section-sub">Per goal &middot; with dosing</span>
+      </div>
+
+      <div id="goal-flow-container" style="margin-top: 14px;"></div>
+    </section>
+
+  </div><!-- /.body -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-brand">PeptOdyssey</div>
+    <div class="footer-note">For clinician-supervised use. Recommendations are decision support, not a prescription. Starting and upper-bound doses are drawn from FDA labeling and peer-reviewed clinical trials where available; investigational peptides are explicitly marked.</div>
+    <div class="footer-url">peptodyssey.com</div>
+  </div>
+
+</div><!-- /.page -->
+
+<script>
+/* ================================================================
+   REPORT DATA — edit only this object to change the dossier.
+   ================================================================ */
+const reportData = {
+
+  /* ── Header / patient identity ── */
+  patient: {
+    name:         "M. Chen",
+    age:          56,
+    sex:          "Female",
+    reportId:     "POD-2026-0847",
+    analysisDate: "07-MAY-2026",
+    clinic:       "Boutique Clinic Demo Account"
+  },
+
+  /* ── §1 Inputs ───────────────────────────────────────── */
+  demographics: [
+    { k: "Age",           v: "56 yrs" },
+    { k: "Sex",           v: "Female" },
+    { k: "BMI",           v: "31.4 kg/m²" },
+    { k: "Menopausal status", v: "Post-menopausal (since age 51)" },
+    { k: "Ethnicity (self-id)", v: "East Asian" }
+  ],
+
+  goals: [
+    "Lose weight",
+    "Reduce inflammation in osteoarthritic knees",
+    "Reduce wrinkles in skin"
+  ],
+
+  genetics: {
+    status: { label: "Whole-genome VCF on file", level: "complete" }
+  },
+
+  medicalHistory: [
+    "Bilateral knee osteoarthritis (Dx 2022, K-L grade II)",
+    "Pre-diabetes (HbA1c 6.0%, MAR-2026)",
+    "Hypothyroidism on levothyroxine 75 mcg/day",
+    "OTC: ibuprofen PRN, vitamin D3 2000 IU/day"
+  ],
+
+  familyHistory: [
+    "Mother: type-2 diabetes",
+    "Father: colorectal cancer (age 71)",
+    "No family Hx of MTC or MEN2"
+  ],
+
+  /* ── §2 Safety ──
+     severity: "danger" (red) | "warn" (amber) | "ok" (green) */
+  safety: [
+    {
+      severity: "ok",
+      item: "<strong>No absolute contraindications identified.</strong> No personal Hx of MTC, MEN2, pancreatitis, or active malignancy; family Hx negative for MTC/MEN2.",
+      source: "Patient intake 02-MAY-2026; Wegovy &amp; Zepbound USPI"
+    },
+    {
+      severity: "warn",
+      item: "<strong>Pre-diabetic HbA1c (6.0%).</strong> Recheck at week 12; watch for hypoglycemia in first 4 weeks of GLP-1 titration.",
+      source: "ADA 2024 Standards of Care, §9"
+    },
+    {
+      severity: "warn",
+      item: "<strong>Levothyroxine + Semaglutide.</strong> Dose levothyroxine ≥1 hr before any oral intake on injection day; recheck TSH at week 8.",
+      source: "Wegovy USPI §7; Lupoli et al., 2023"
+    },
+    {
+      severity: "warn",
+      item: "<strong>Post-menopausal + family Hx of CRC.</strong> Defer IGF-1–raising peptides (Ipamorelin, CJC-1295, Tesamorelin) until colorectal screening is current. If used, monitor IGF-1 quarterly.",
+      source: "Endocrine Society GH/IGF-1 guideline 2019; Renehan et al., Lancet 2004"
+    },
+    {
+      severity: "warn",
+      item: "<strong>Chronic NSAID use.</strong> Re-evaluate ibuprofen at week 8 if BPC-157 reduces pain scores.",
+      source: "ACR/AF 2019 OA guideline"
+    }
+  ],
+
+  /* ── §3 Goal → Peptide pathways ──────────────────── */
+  goalPeptideMap: [
+    {
+      goal: "Lose weight",
+      rationale: "Pre-diabetic HbA1c plus FTO/TCF7L2 risk variants support a GLP-1 / GIP agonist as first-line.",
+      peptides: [
+        {
+          name:         "Semaglutide",
+          status:       "FDA approved",
+          statusClass:  "fda",
+          startingDose: "0.25 mg SC weekly",
+          maxDose:      "2.4 mg SC weekly",
+          titration:    "q4wk: 0.25 → 0.5 → 1.0 → 1.7 → 2.4 mg/wk. Hold at any step for tolerability.",
+          sourceFda:    "Wegovy USPI, Rev. 2023 (NDA 215256)",
+          notes:        "Extend the 1.0 mg/wk plateau to 8 weeks; reduces GI-driven discontinuation ~30% with no loss in 12-mo weight outcome.",
+          notesSource:  "Wadden et al., JAMA 2021; Ghusn et al., 2022"
+        },
+        {
+          name:         "Tirzepatide",
+          status:       "FDA approved",
+          statusClass:  "fda",
+          startingDose: "2.5 mg SC weekly",
+          maxDose:      "15 mg SC weekly",
+          titration:    "q4wk: 2.5 → 5 → 7.5 → 10 → 12.5 → 15 mg/wk.",
+          sourceFda:    "Zepbound USPI, 2023 (NDA 217806)",
+          notes:        "Alternative if Semaglutide poorly tolerated. ~22% mean weight loss at 72 wk vs. ~15% for Semaglutide; greater GI burden in titration.",
+          notesSource:  "Jastreboff et al., NEJM 2022 (SURMOUNT-1)"
+        },
+        {
+          name:         "AOD-9604",
+          status:       "Investigational",
+          statusClass:  "inv",
+          startingDose: "250 mcg SC daily",
+          maxDose:      "300 mcg SC daily",
+          titration:    "Fixed dosing; no titration. Cycle 12 weeks on / 4 weeks off.",
+          sourceFda:    "Not FDA approved for weight loss; no labeling.",
+          notes:        "Adjunct only when GLP-1 class contraindicated. Human evidence limited; not equivalent to Semaglutide/Tirzepatide.",
+          notesSource:  "Heffernan et al., JCEM 2001"
+        }
+      ]
+    },
+    {
+      goal: "Reduce inflammation in osteoarthritic knees",
+      rationale: "GDF5 risk genotype + K-L grade II disease. Goal: symptomatic anti-inflammatory effect, not disease modification.",
+      peptides: [
+        {
+          name:         "BPC-157",
+          status:       "Investigational",
+          statusClass:  "inv",
+          startingDose: "250 mcg SC daily, near-joint or systemic",
+          maxDose:      "500 mcg SC daily",
+          titration:    "Begin at 250 mcg × 7 days; advance to 500 mcg if tolerated. Cycle 4–6 weeks on, 2 weeks off.",
+          sourceFda:    "Not FDA approved. Not on the FDA 503A bulks list as of 2023 — verify state-level compounding rules before dispensing.",
+          notes:        "Strong preclinical tendon/cartilage data; small human series in knee OA. Reassess at week 6 (pain NRS + 30-sec sit-to-stand).",
+          notesSource:  "Sikiric et al., 2018; Chang et al., 2014"
+        },
+        {
+          name:         "TB-500 (Thymosin Beta-4)",
+          status:       "Investigational",
+          statusClass:  "inv",
+          startingDose: "2 mg SC twice weekly",
+          maxDose:      "2.5 mg SC twice weekly",
+          titration:    "Loading 4–6 weeks; transition to maintenance 1× weekly if responsive.",
+          sourceFda:    "Not FDA approved.",
+          notes:        "Complementary to BPC-157 (angiogenesis vs. anti-inflammation); reasonable to stack.",
+          notesSource:  "Goldstein &amp; Hannappel, Ann NY Acad Sci 2012"
+        }
+      ]
+    },
+    {
+      goal: "Reduce wrinkles in skin",
+      rationale: "MMP1 variant indicates moderate collagen turnover. Two-mechanism approach (topical signaling + oral substrate) outperforms either alone.",
+      peptides: [
+        {
+          name:         "GHK-Cu (Copper Tripeptide-1)",
+          status:       "Cosmetic / Investigational SC",
+          statusClass:  "cosm",
+          startingDose: "Topical 0.05% serum BID",
+          maxDose:      "Topical 0.2% serum BID",
+          titration:    "Begin 0.05% for 2 weeks; advance to 0.1–0.2% if no irritation. SC route reserved for combined skin/wound applications.",
+          sourceFda:    "GHK-Cu is a permitted cosmetic ingredient (FDA does not pre-approve cosmetic actives). No injectable label.",
+          notes:        "Topical preferred for wrinkles: direct dermal action, minimal systemic exposure, strongest evidence base.",
+          notesSource:  "Pickart, Biomed Res Int 2015"
+        },
+        {
+          name:         "Collagen peptides (oral hydrolysate)",
+          status:       "Dietary supplement",
+          statusClass:  "cosm",
+          startingDose: "2.5 g PO daily",
+          maxDose:      "10 g PO daily",
+          titration:    "Begin 2.5 g × 2 weeks; advance to 5–10 g daily.",
+          sourceFda:    "GRAS as a food ingredient; no FDA wrinkle indication.",
+          notes:        "Modest but reproducible improvement in elasticity/hydration at 8–12 wk. Pairs with topical GHK-Cu.",
+          notesSource:  "Choi et al., 2019; de Miranda et al., 2021"
+        }
+      ]
+    }
+  ]
+
+};
+
+/* ================================================================
+   RENDERER
+   ================================================================ */
+function renderReport(d) {
+
+  /* Header */
+  document.getElementById("meta-patient").textContent  = d.patient.name;
+  document.getElementById("meta-date").textContent     = d.patient.analysisDate;
+  document.getElementById("meta-reportid").textContent = d.patient.reportId;
+  document.getElementById("meta-clinic").textContent   = d.patient.clinic;
+
+  /* §1 Demographics */
+  document.getElementById("demo-row").innerHTML =
+    d.demographics.map(x => `<div class="demo-item"><span class="k">${x.k}</span><span class="v">${x.v}</span></div>`).join("");
+
+  /* §1 Goals */
+  document.getElementById("goals-list").innerHTML =
+    d.goals.map((g, i) => `<div class="goal-item"><div class="goal-num">${i+1}</div><div class="goal-text">${g}</div></div>`).join("");
+
+  /* §1 Genetics */
+  const gs = document.getElementById("genetics-status");
+  gs.classList.add(d.genetics.status.level);
+  gs.textContent = d.genetics.status.label;
+
+  /* §1 Medical Hx */
+  document.getElementById("hx-list").innerHTML =
+    d.medicalHistory.map(i => `<li>${i}</li>`).join("");
+
+  /* §1 Family Hx */
+  document.getElementById("fhx-list").innerHTML =
+    d.familyHistory.map(i => `<li>${i}</li>`).join("");
+
+  /* §2 Safety — single list, severity per item */
+  document.getElementById("safety-items").innerHTML =
+    d.safety.map(it => `
+      <div class="safety-item">
+        <div class="sev ${it.severity}"></div>
+        <div>
+          ${it.item}
+          <span class="source">${it.source}</span>
+        </div>
+      </div>`).join("");
+
+  /* §3 Goal flow */
+  const arrowSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 5 20 12 13 19"/></svg>`;
+
+  document.getElementById("goal-flow-container").innerHTML =
+    d.goalPeptideMap.map(g => `
+      <div class="goal-flow">
+        <div class="goal-card">
+          <div class="gc-label">Health goal</div>
+          <div class="gc-title">${g.goal}</div>
+          <div class="gc-rationale">${g.rationale}</div>
+        </div>
+        <div class="arrow">${arrowSvg}</div>
+        <div class="peptide-stack-list">
+          ${g.peptides.map(p => `
+            <div class="peptide-card">
+              <div class="peptide-card-head">
+                <div class="peptide-card-name">${p.name}</div>
+                <span class="peptide-card-status status-${p.statusClass}">${p.status}</span>
+              </div>
+              <div class="dose-grid">
+                <div class="dose-cell"><span class="dl">Starting dose</span><span class="dv start">${p.startingDose}</span></div>
+                <div class="dose-cell"><span class="dl">Upper bound</span><span class="dv max">${p.maxDose}</span></div>
+              </div>
+              <div class="titration">${p.titration}</div>
+              <div class="peptide-source"><span class="src-label">FDA / trial source</span>${p.sourceFda}</div>
+              <div class="peptide-notes">
+                <span class="nl">Personalization note</span>${p.notes}
+                <span class="nsrc">${p.notesSource}</span>
+              </div>
+            </div>`).join("")}
+        </div>
+      </div>`).join("");
+}
+
+renderReport(reportData);
+</script>
+</body>
+</html>
