@@ -39,6 +39,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from engine import run_pipeline
@@ -62,6 +63,15 @@ app      = FastAPI(
     title="U4U Engine API",
     version="2.0.0",
     description="Genomic variant annotation and interpretation pipeline.",
+)
+
+# ── CORS — allow frontend (localhost:3000) to reach the API ───────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 _executor = ThreadPoolExecutor(max_workers=WORKERS)
 
@@ -107,22 +117,24 @@ def _run_pipeline_task(job_id: str, file_bytes: bytes, filename: str):
     log.info("job=%s starting file=%s size=%d bytes", job_id, filename, len(file_bytes))
 
     try:
-        results = run_pipeline(
+        pipeline_output = run_pipeline(
             file_bytes,
             filename,
             filters=FILTERS,
             data_dir=DATA_DIR,
             progress_callback=lambda step, pct: _progress_callback(job_id, step, pct),
         )
+        # V3: run_pipeline returns a dict with 'variants' and enrichment data.
+        variants = pipeline_output.get("variants", [])
         with _jobs_lock:
             _jobs[job_id].update({
                 "status":      "done",
-                "count":       len(results),
-                "results":     results,
+                "count":       len(variants),
+                "results":     pipeline_output,
                 "progress":    {"step": "Complete", "pct": 100},
                 "finished_at": _now_iso(),
             })
-        log.info("job=%s done variants=%d", job_id, len(results))
+        log.info("job=%s done variants=%d", job_id, len(variants))
 
     except ValueError as exc:
         with _jobs_lock:

@@ -91,6 +91,7 @@ from .annotators.vep       import fetch_vep, select_canonical_consequence
 from .annotators.clinvar   import fetch_clinvar
 from .annotators.gnomad    import fetch_gnomad
 from .annotators.myvariant import fetch_myvariant
+from .annotators.bpc157_predictor import predict_bpc157_response, generate_bpc157_summary, filter_bpc157_relevant
 
 __all__ = [
     # Pipeline
@@ -125,4 +126,8 @@ __all__ = [
     "fetch_clinvar",
     "fetch_gnomad",
     "fetch_myvariant",
+    # BPC-157
+    "predict_bpc157_response",
+    "generate_bpc157_summary",
+    "filter_bpc157_relevant",
 ]

@@ -1,0 +1,838 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://peptidiq.io/schemas/engine/v1.0/prediction-request.json",
+  "title": "PeptidIQ Predictive Logic Engine — Input & Weight Schema",
+  "description": "Defines the full input payload, evidence-layer weights, and structured output contract for the Genomics-Based Peptide and Hormone Response Interpretation Engine (PeptidIQ V3+). This schema governs both the database storage format and the inter-service JSON contract between the annotation pipeline and the scoring engine.",
+  "type": "object",
+  "required": ["schema_version", "job_id", "patient_context", "input_layer", "evidence_weights", "pipeline_config"],
+  "additionalProperties": false,
+
+  "properties": {
+
+    "schema_version": {
+      "type": "string",
+      "const": "peptidiq-engine-v1.0",
+      "description": "Pinned schema version. Increment minor for backward-compatible additions; major for breaking changes."
+    },
+
+    "job_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 assigned at upload time. Foreign key to the jobs table in Postgres."
+    },
+
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of when the job entered the queue."
+    },
+
+    "patient_context": {
+      "type": "object",
+      "description": "De-identified patient metadata required for ancestry-aware scoring and dosing range selection. No PHI stored here — use the jobs table for identifiers.",
+      "required": ["ancestry_population", "biological_sex", "age_range", "clinical_context"],
+      "additionalProperties": false,
+      "properties": {
+        "ancestry_population": {
+          "type": "string",
+          "enum": ["AFR", "AMR", "EAS", "EUR", "SAS", "MID", "OCE", "ADMIXED", "UNKNOWN"],
+          "description": "gnomAD superpopulation code. Drives allele-frequency thresholds and CAG repeat reference ranges."
+        },
+        "biological_sex": {
+          "type": "string",
+          "enum": ["XX", "XY", "OTHER", "UNKNOWN"],
+          "description": "Biological sex for hormone reference range selection."
+        },
+        "age_range": {
+          "type": "string",
+          "enum": ["18-34", "35-44", "45-54", "55-64", "65-74", "75+", "UNKNOWN"],
+          "description": "Decade-band age range. Used to calibrate menopausal status and peptide dosing ranges."
+        },
+        "clinical_context": {
+          "type": "string",
+          "enum": ["menopause_hrt", "longevity", "sexual_health", "metabolic", "general", "custom"],
+          "description": "Protocol context — determines which peptide rows are prioritised in the condition library query."
+        },
+        "menopause_status": {
+          "type": ["string", "null"],
+          "enum": ["pre", "peri", "post", "surgical", null],
+          "description": "Menopausal status where applicable. Null for non-menopausal clinical contexts."
+        },
+        "active_medications": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Free-text list of current medications for drug-gene interaction flagging (e.g. ['tamoxifen', 'warfarin'])."
+        }
+      }
+    },
+
+    "input_layer": {
+      "type": "object",
+      "description": "Layer 1 — Multi-omic data inputs. At minimum, variant_data must be present. All other inputs are optional but improve scoring fidelity. Each sub-object carries its own provenance metadata.",
+      "required": ["variant_data"],
+      "additionalProperties": false,
+
+      "properties": {
+
+        "genomic_sequence": {
+          "type": ["object", "null"],
+          "description": "Full-length prohormone gene sequences from WGS/WES. Used by the HMM to detect intact cleavage sites and validate processing potential.",
+          "additionalProperties": false,
+          "properties": {
+            "available": { "type": "boolean" },
+            "source_format": {
+              "type": "string",
+              "enum": ["BAM", "CRAM", "FASTQ", "FASTA", "NONE"],
+              "description": "Source file format. BAM/CRAM required for ExpansionHunter STR calling."
+            },
+            "reference_genome": {
+              "type": "string",
+              "enum": ["GRCh37", "GRCh38", "T2T-CHM13"],
+              "description": "Reference assembly used for alignment."
+            },
+            "coverage_depth_mean": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "description": "Mean genome-wide coverage depth (e.g. 30 for 30x WGS). Used to weight confidence of variant calls."
+            },
+            "prohormone_sequences": {
+              "type": "array",
+              "description": "Extracted sequences for target prohormone genes, plus HMM cleavage site detection results.",
+              "items": {
+                "type": "object",
+                "required": ["gene_symbol", "sequence_length_bp", "cleavage_sites_detected"],
+                "additionalProperties": false,
+                "properties": {
+                  "gene_symbol": { "type": "string" },
+                  "sequence_length_bp": { "type": "integer", "minimum": 0 },
+                  "cleavage_sites_detected": {
+                    "type": "array",
+                    "description": "Double basic residue cleavage sites found by HMM scan (e.g. Lys-Arg motifs).",
+                    "items": {
+                      "type": "object",
+                      "required": ["position", "motif", "intact"],
+                      "properties": {
+                        "position": { "type": "integer" },
+                        "motif": { "type": "string", "description": "e.g. 'KR', 'RR', 'KK'" },
+                        "intact": { "type": "boolean", "description": "False if a variant disrupts the cleavage site." }
+                      }
+                    }
+                  },
+                  "str_repeat_data": {
+                    "type": ["object", "null"],
+                    "description": "STR repeat call from ExpansionHunter (populated for AR, HTT, ATXN1, etc.).",
+                    "properties": {
+                      "tool": { "type": "string", "enum": ["ExpansionHunter", "STRipy", "manual"] },
+                      "tool_version": { "type": "string" },
+                      "repeat_unit": { "type": "string", "description": "e.g. 'CAG'" },
+                      "allele_1_count": { "type": "integer" },
+                      "allele_2_count": { "type": ["integer", "null"] },
+                      "confidence_interval_95": {
+                        "type": "object",
+                        "properties": {
+                          "lower": { "type": "integer" },
+                          "upper": { "type": "integer" }
+                        }
+                      },
+                      "pathologic_threshold": { "type": "integer", "description": "e.g. 35 for AR Kennedy disease." },
+                      "sensitivity_classification": {
+                        "type": "string",
+                        "enum": ["HYPERSENSITIVE", "STANDARD", "BLUNTED", "PATHOLOGIC"],
+                        "description": "Derived classification used by the scoring engine."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "transcriptomic_flux": {
+          "type": ["object", "null"],
+          "description": "RNA-seq expression data for peptide genes and their cognate receptor genes. When available, expression flux is used by Evidence Weight II (Conservation) and III (Structural Bioavailability) to calibrate the predicted active concentration.",
+          "additionalProperties": false,
+          "properties": {
+            "available": { "type": "boolean" },
+            "platform": {
+              "type": "string",
+              "enum": ["RNA-seq", "scRNA-seq", "Microarray", "RT-qPCR", "NONE"],
+              "description": "Expression quantification platform."
+            },
+            "normalization_method": {
+              "type": "string",
+              "enum": ["TPM", "RPKM", "FPKM", "TMM", "DESeq2-normalized", "raw_counts", "OTHER"],
+              "description": "Normalization method applied to RNA-seq counts."
+            },
+            "gene_expression": {
+              "type": "array",
+              "description": "Per-gene expression values for the peptide gene and its primary receptor gene.",
+              "items": {
+                "type": "object",
+                "required": ["gene_symbol", "gene_role", "expression_value", "unit"],
+                "additionalProperties": false,
+                "properties": {
+                  "gene_symbol": { "type": "string" },
+                  "gene_role": {
+                    "type": "string",
+                    "enum": ["peptide_source", "receptor", "processing_enzyme", "regulator"],
+                    "description": "Functional role of the gene in the peptide signaling axis."
+                  },
+                  "expression_value": { "type": "number", "minimum": 0 },
+                  "unit": { "type": "string", "enum": ["TPM", "RPKM", "FPKM", "TMM", "raw_count"] },
+                  "tissue_source": {
+                    "type": "string",
+                    "description": "Tissue or cell type from which RNA was extracted (e.g. 'whole_blood', 'endometrium')."
+                  },
+                  "z_score_vs_reference": {
+                    "type": ["number", "null"],
+                    "description": "Z-score relative to sex/age-matched reference cohort. Drives receptor saturation prediction."
+                  },
+                  "expression_class": {
+                    "type": "string",
+                    "enum": ["HIGH", "NORMAL", "LOW", "ABSENT", "UNKNOWN"],
+                    "description": "Discretized expression level for scoring engine input."
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "peptidomic_ms_data": {
+          "type": ["object", "null"],
+          "description": "Mass spectrometry data confirming the physical presence of processed (active) peptide fragments. This is the gold-standard confirmation input — when present, it directly boosts Evidence Weight I (Processing & Splicing Fidelity).",
+          "additionalProperties": false,
+          "properties": {
+            "available": { "type": "boolean" },
+            "instrument_platform": {
+              "type": "string",
+              "description": "e.g. 'Orbitrap Fusion', 'Q Exactive', 'timsTOF Pro'"
+            },
+            "fragmentation_method": {
+              "type": "string",
+              "enum": ["CID", "HCD", "ETD", "ECD", "UVPD", "OTHER"]
+            },
+            "peptide_spectrum_matches": {
+              "type": "array",
+              "description": "Peptide-Spectrum Matches (PSMs) confirming detection of processed peptide fragments.",
+              "items": {
+                "type": "object",
+                "required": ["peptide_sequence", "parent_gene", "psm_score", "q_value", "confirmed_active_fragment"],
+                "additionalProperties": false,
+                "properties": {
+                  "peptide_sequence": {
+                    "type": "string",
+                    "pattern": "^[ACDEFGHIKLMNPQRSTVWY]+$",
+                    "description": "Single-letter amino acid sequence of the detected fragment."
+                  },
+                  "parent_gene": { "type": "string", "description": "Gene encoding the parent prohormone." },
+                  "precursor_mz": { "type": "number" },
+                  "charge_state": { "type": "integer", "minimum": 1 },
+                  "psm_score": {
+                    "type": "number",
+                    "description": "Search engine score (e.g. Andromeda score, Mascot ion score)."
+                  },
+                  "q_value": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "FDR-corrected q-value. Values ≤ 0.01 are considered high-confidence."
+                  },
+                  "confirmed_active_fragment": {
+                    "type": "boolean",
+                    "description": "True if this PSM matches a known biologically active fragment (cross-referenced against UniProt/PRO)."
+                  },
+                  "quantification": {
+                    "type": ["object", "null"],
+                    "properties": {
+                      "method": { "type": "string", "enum": ["LFQ", "TMT", "iTRAQ", "SILAC", "XIC-area", "spectral_count"] },
+                      "intensity": { "type": "number" },
+                      "normalized_intensity": { "type": ["number", "null"] }
+                    }
+                  },
+                  "post_translational_modifications": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "position": { "type": "integer" },
+                        "modification_type": { "type": "string", "description": "e.g. 'phosphorylation', 'amidation', 'sulfation'" },
+                        "mass_delta_da": { "type": "number" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "variant_data": {
+          "type": "object",
+          "description": "Non-synonymous SNPs and structural variants identified in the patient's VCF/BAM. This is the required minimum input — all other layers are optional enrichment.",
+          "required": ["source_format", "variants"],
+          "additionalProperties": false,
+          "properties": {
+            "source_format": {
+              "type": "string",
+              "enum": ["VCF", "gVCF", "23andMe_v5", "AncestryDNA", "CSV_custom"],
+              "description": "Source format of the variant data."
+            },
+            "annotation_tools_applied": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["VEP", "ClinVar", "gnomAD", "MyVariant.info", "SpliceAI", "CADD", "PolyPhen2", "SIFT", "AlphaMissense"]
+              },
+              "description": "Annotation tools already applied upstream by the annotation pipeline."
+            },
+            "variants": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Per-variant records, post-annotation and post-quality-filter.",
+              "items": {
+                "type": "object",
+                "required": ["variant_id", "gene_symbol", "variant_type", "chromosome", "position_grch38", "ref_allele", "alt_allele", "zygosity"],
+                "additionalProperties": false,
+                "properties": {
+                  "variant_id": { "type": "string", "description": "Internal UUID for this variant record." },
+                  "gene_symbol": { "type": "string" },
+                  "variant_type": {
+                    "type": "string",
+                    "enum": ["SNP", "INDEL", "CNV", "STR_repeat", "SV", "MNV"]
+                  },
+                  "chromosome": {
+                    "type": "string",
+                    "pattern": "^(chr)?(1[0-9]|2[0-2]|[1-9]|X|Y|MT)$"
+                  },
+                  "position_grch38": { "type": "integer", "minimum": 1 },
+                  "ref_allele": { "type": "string" },
+                  "alt_allele": { "type": "string" },
+                  "zygosity": {
+                    "type": "string",
+                    "enum": ["HOM_REF", "HET", "HOM_ALT", "HEMI", "UNKNOWN"]
+                  },
+                  "rsid": { "type": ["string", "null"], "pattern": "^rs[0-9]+$" },
+                  "hgvs_c": { "type": ["string", "null"], "description": "HGVS coding notation, e.g. 'NM_000044.6:c.172G>A'" },
+                  "hgvs_p": { "type": ["string", "null"], "description": "HGVS protein notation, e.g. 'NP_000035.2:p.Val58Met'" },
+                  "vep_consequence": {
+                    "type": ["string", "null"],
+                    "description": "Most severe VEP consequence, e.g. 'missense_variant', 'stop_gained'."
+                  },
+                  "clinvar_significance": {
+                    "type": ["string", "null"],
+                    "enum": ["Pathogenic", "Likely_pathogenic", "VUS", "Likely_benign", "Benign", "Conflicting", "not_provided", null]
+                  },
+                  "clinvar_condition": { "type": ["string", "null"] },
+                  "gnomad_af_global": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+                  "gnomad_af_population": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+                  "spliceai_max_delta": {
+                    "type": ["number", "null"],
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Maximum SpliceAI delta score across all four splice site types."
+                  },
+                  "cadd_phred": { "type": ["number", "null"], "description": "CADD Phred-scaled score (≥20 = top 1%)." },
+                  "alphamissense_score": {
+                    "type": ["number", "null"],
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "AlphaMissense pathogenicity score (≥0.564 = likely pathogenic)."
+                  },
+                  "domain_location": {
+                    "type": ["string", "null"],
+                    "description": "Protein domain affected, e.g. 'DNA-binding domain', 'ligand-binding pocket', 'N-terminal signal peptide'."
+                  },
+                  "affects_binding_domain": {
+                    "type": "boolean",
+                    "description": "True if VEP/UniProt annotation places this variant within the receptor binding epitope. Directly feeds Evidence Weight IV."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "evidence_weights": {
+      "type": "object",
+      "description": "Layer 2 — The scoring brain. Four evidence factors, each with a fixed weight (summing to 1.0) and a per-factor score computed by the engine. The weighted sum produces the final peptide response score. Weights are global constants; scores are patient-specific.",
+      "required": [
+        "processing_splicing_fidelity",
+        "conservation_evolution",
+        "structural_bioavailability",
+        "interaction_confidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+
+        "processing_splicing_fidelity": {
+          "type": "object",
+          "description": "Evidence Weight I — 35%. Assesses whether the prohormone can be correctly processed into its active peptide form. Informed by genomic cleavage site integrity and MS confirmation of active fragments.",
+          "required": ["weight", "score", "contributing_signals"],
+          "additionalProperties": false,
+          "properties": {
+            "weight": {
+              "type": "number",
+              "const": 0.35,
+              "description": "Fixed weight: 35% of total evidence score."
+            },
+            "score": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Patient-specific score for this factor (0.0 = completely disrupted, 1.0 = fully intact and MS-confirmed)."
+            },
+            "weighted_score": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 0.35,
+              "description": "Computed as weight × score. Populated by the engine after scoring."
+            },
+            "contributing_signals": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "hmm_cleavage_sites_intact": {
+                  "type": "boolean",
+                  "description": "True if the HMM scan found all expected double-basic-residue cleavage sites intact."
+                },
+                "cleavage_sites_disrupted_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Number of cleavage sites disrupted by variants."
+                },
+                "ms_active_fragment_confirmed": {
+                  "type": "boolean",
+                  "description": "True if peptidomic MS data confirmed the active processed fragment (q ≤ 0.01)."
+                },
+                "ms_psm_count": {
+                  "type": ["integer", "null"],
+                  "minimum": 0,
+                  "description": "Number of PSMs supporting the active fragment. Null if MS data not available."
+                },
+                "splice_disruption_detected": {
+                  "type": "boolean",
+                  "description": "True if SpliceAI delta score ≥ 0.2 on a relevant splice site, potentially disrupting transcript splicing."
+                },
+                "spliceai_max_delta": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+                "confidence_note": {
+                  "type": "string",
+                  "description": "Engine-generated human-readable note explaining the score, e.g. 'Cleavage sites intact; no MS data available — score partially inferred.'"
+                }
+              }
+            }
+          }
+        },
+
+        "conservation_evolution": {
+          "type": "object",
+          "description": "Evidence Weight II — 25%. Measures evolutionary constraint on the peptide sequence. Highly conserved sequences are ranked higher as Critical Drivers; rapidly-evolving or lineage-specific sequences receive lower scores.",
+          "required": ["weight", "score", "contributing_signals"],
+          "additionalProperties": false,
+          "properties": {
+            "weight": {
+              "type": "number",
+              "const": 0.25,
+              "description": "Fixed weight: 25% of total evidence score."
+            },
+            "score": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Patient-specific score (1.0 = variant at perfectly conserved position; 0.0 = variant at rapidly-evolving position)."
+            },
+            "weighted_score": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 0.25,
+              "description": "Computed as weight × score."
+            },
+            "contributing_signals": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "phylop_score": {
+                  "type": ["number", "null"],
+                  "description": "PhyloP100way conservation score. Positive = conserved; negative = accelerated evolution."
+                },
+                "phastcons_score": {
+                  "type": ["number", "null"],
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "phastCons probability of evolutionary conservation (0–1)."
+                },
+                "gerp_rs_score": {
+                  "type": ["number", "null"],
+                  "description": "GERP++ RS score. Values > 2 indicate significant evolutionary constraint."
+                },
+                "species_conserved_count": {
+                  "type": ["integer", "null"],
+                  "minimum": 0,
+                  "description": "Number of species (out of reference alignment set) sharing the reference allele at this position."
+                },
+                "substitution_rate_class": {
+                  "type": "string",
+                  "enum": ["HIGHLY_CONSERVED", "MODERATELY_CONSERVED", "NEUTRAL", "ACCELERATED"],
+                  "description": "Discretized substitution rate class used internally for scoring."
+                },
+                "is_critical_driver": {
+                  "type": "boolean",
+                  "description": "True if conservation score places this peptide/variant in the 'Critical Driver' tier (phyloP > 2 AND phastCons > 0.9)."
+                },
+                "confidence_note": { "type": "string" }
+              }
+            }
+          }
+        },
+
+        "structural_bioavailability": {
+          "type": "object",
+          "description": "Evidence Weight III — 20%. Evaluates the predicted 3D structure and physicochemical properties that govern whether the peptide can reach its receptor in an active conformation. Alpha-helical amphipathic peptides rank highest; highly hydrophobic or disordered sequences rank lower.",
+          "required": ["weight", "score", "contributing_signals"],
+          "additionalProperties": false,
+          "properties": {
+            "weight": {
+              "type": "number",
+              "const": 0.20,
+              "description": "Fixed weight: 20% of total evidence score."
+            },
+            "score": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Structural bioavailability score (1.0 = optimal solubility + favorable secondary structure)."
+            },
+            "weighted_score": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 0.20,
+              "description": "Computed as weight × score."
+            },
+            "contributing_signals": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "secondary_structure_prediction": {
+                  "type": "string",
+                  "enum": ["alpha_helix", "beta_sheet", "mixed", "disordered", "unknown"],
+                  "description": "Predicted dominant secondary structure of the processed active fragment."
+                },
+                "is_amphipathic_helix": {
+                  "type": "boolean",
+                  "description": "True if alpha-helical AND amphipathic — highest-rank structural class for membrane-active peptide responses."
+                },
+                "grand_average_hydropathicity": {
+                  "type": ["number", "null"],
+                  "description": "GRAVY score (Kyte-Doolittle). Positive = hydrophobic (poor aqueous bioavailability); negative = hydrophilic."
+                },
+                "solubility_class": {
+                  "type": "string",
+                  "enum": ["HIGH", "MODERATE", "LOW", "INSOLUBLE"],
+                  "description": "Predicted aqueous solubility class. 'INSOLUBLE' is a signal noise flag."
+                },
+                "net_charge_at_ph74": {
+                  "type": ["number", "null"],
+                  "description": "Predicted net charge at physiological pH 7.4. Extremes (< -5 or > +5) reduce receptor access."
+                },
+                "residue_chirality_issues": {
+                  "type": "boolean",
+                  "description": "True if the variant introduces a D-amino acid analog or other chirality-disrupting modification."
+                },
+                "alphafold_plddt_fragment": {
+                  "type": ["number", "null"],
+                  "minimum": 0,
+                  "maximum": 100,
+                  "description": "AlphaFold pLDDT confidence score for the active fragment region (not the full protein). Values > 70 = high confidence."
+                },
+                "confidence_note": { "type": "string" }
+              }
+            }
+          }
+        },
+
+        "interaction_confidence": {
+          "type": "object",
+          "description": "Evidence Weight IV — 20%. Predicts the binding confidence between the processed peptide and its target receptor. Driven by AlphaFold-Multimer / docking pLDDT scores and whether the patient's variant falls within the receptor binding pocket.",
+          "required": ["weight", "score", "contributing_signals"],
+          "additionalProperties": false,
+          "properties": {
+            "weight": {
+              "type": "number",
+              "const": 0.20,
+              "description": "Fixed weight: 20% of total evidence score."
+            },
+            "score": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Interaction confidence score (1.0 = high-confidence binding epitope predicted AND no disruptive variants in pocket)."
+            },
+            "weighted_score": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 0.20,
+              "description": "Computed as weight × score."
+            },
+            "contributing_signals": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "alphafold_multimer_plddt": {
+                  "type": ["number", "null"],
+                  "minimum": 0,
+                  "maximum": 100,
+                  "description": "AlphaFold-Multimer interface pLDDT score for the peptide–receptor complex. > 70 = high confidence."
+                },
+                "docking_score": {
+                  "type": ["number", "null"],
+                  "description": "Binding free energy estimate (kcal/mol) from molecular docking simulation. More negative = stronger predicted binding."
+                },
+                "docking_tool": {
+                  "type": ["string", "null"],
+                  "enum": ["Rosetta", "AutoDock-Vina", "Glide", "HADDOCK", "ColabFold", "FoldDock", null]
+                },
+                "variant_in_binding_pocket": {
+                  "type": "boolean",
+                  "description": "True if any patient variant is located within the receptor ligand-binding pocket (annotated via UniProt/PDB cross-reference)."
+                },
+                "binding_pocket_disruption_score": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0,
+                  "description": "Predicted degree of binding pocket disruption (0 = none; 1 = complete loss of binding interface)."
+                },
+                "receptor_expression_class": {
+                  "type": ["string", "null"],
+                  "enum": ["HIGH", "NORMAL", "LOW", "ABSENT", null],
+                  "description": "Expression level of the receptor gene from transcriptomic data, if available."
+                },
+                "interaction_class": {
+                  "type": "string",
+                  "enum": ["HIGH_CONFIDENCE", "MODERATE_CONFIDENCE", "LOW_CONFIDENCE", "PREDICTED_DISRUPTED"],
+                  "description": "Discretized interaction tier for downstream scoring."
+                },
+                "confidence_note": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "pipeline_config": {
+      "type": "object",
+      "description": "Engine-level configuration flags that control which scoring modules are activated and how the HMM filter is applied.",
+      "required": ["hmm_filter_enabled", "weight_profile"],
+      "additionalProperties": false,
+      "properties": {
+        "hmm_filter_enabled": {
+          "type": "boolean",
+          "description": "If true, the HMM prohormone pattern scan is run before scoring to filter non-peptide variants."
+        },
+        "hmm_model_version": { "type": ["string", "null"] },
+        "weight_profile": {
+          "type": "string",
+          "enum": ["standard_v1", "ms_enriched", "transcriptomic_enriched", "custom"],
+          "description": "'standard_v1' uses the canonical 0.35/0.25/0.20/0.20 weights. Other profiles rebalance weights when certain data layers are absent."
+        },
+        "custom_weights": {
+          "type": ["object", "null"],
+          "description": "Only populated when weight_profile = 'custom'. Weights must sum to exactly 1.0.",
+          "properties": {
+            "processing_splicing_fidelity": { "type": "number", "minimum": 0, "maximum": 1 },
+            "conservation_evolution": { "type": "number", "minimum": 0, "maximum": 1 },
+            "structural_bioavailability": { "type": "number", "minimum": 0, "maximum": 1 },
+            "interaction_confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "modules_enabled": {
+          "type": "object",
+          "properties": {
+            "expansion_hunter_str": { "type": "boolean", "description": "AR CAG repeat calling. Requires BAM input." },
+            "kegg_pathway_mapper": { "type": "boolean" },
+            "alphafold_docking": { "type": "boolean" },
+            "ms_psm_integration": { "type": "boolean" },
+            "transcriptomic_flux_integration": { "type": "boolean" }
+          }
+        },
+        "clinical_context_filter": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Peptide classes to include in the output. Empty array = all classes. e.g. ['Androgen','HRT','Neuropeptide']."
+        }
+      }
+    },
+
+    "outcome_layer": {
+      "type": ["object", "null"],
+      "description": "Layer 3 — Engine output. Populated by the scoring engine after all evidence weights are computed. This is the section written to Postgres and serialized into the V3 PDF dossier.",
+      "additionalProperties": false,
+      "properties": {
+
+        "composite_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Global weighted sum across all four evidence factors. Σ(weight_i × score_i). The primary sort key for the output ranking."
+        },
+
+        "pathway_dominance": {
+          "type": "array",
+          "description": "Identification of lead hormone pathways. Ranked list of 'dominant' peptide signaling axes, with the top-ranked item being the 'Lead Hormone' for this patient.",
+          "items": {
+            "type": "object",
+            "required": ["rank", "pathway_label", "lead_hormone", "dominance_score", "supporting_evidence"],
+            "additionalProperties": false,
+            "properties": {
+              "rank": { "type": "integer", "minimum": 1 },
+              "pathway_label": {
+                "type": "string",
+                "description": "Human-readable pathway label, e.g. 'Androgen Receptor Signaling', 'Melanocortin-4 Arousal Axis'."
+              },
+              "kegg_pathway_ids": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^hsa[0-9]{5}$" }
+              },
+              "lead_hormone": {
+                "type": "string",
+                "description": "The peptide/hormone identified as the primary driver of this pathway in this patient, e.g. 'Testosterone'."
+              },
+              "dominance_score": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Pathway-level composite score aggregated from all contributing gene-variant pairs."
+              },
+              "driver_classification": {
+                "type": "string",
+                "enum": ["CRITICAL_DRIVER", "ACTIVE_DRIVER", "BACKGROUND", "SUPPRESSED"],
+                "description": "CRITICAL_DRIVER = highly conserved + active expression; SUPPRESSED = LOF variant or absent expression."
+              },
+              "supporting_evidence": {
+                "type": "object",
+                "properties": {
+                  "variant_count": { "type": "integer" },
+                  "genes_implicated": { "type": "array", "items": { "type": "string" } },
+                  "ms_confirmation": { "type": "boolean" },
+                  "expression_class": { "type": ["string", "null"] }
+                }
+              },
+              "plain_english_summary": {
+                "type": "string",
+                "description": "1–2 sentence plain-English assertion for the clinical dossier, e.g. 'Insulin-like Growth Factor is currently the primary driver of cellular growth in this sample.'"
+              }
+            }
+          }
+        },
+
+        "receptor_sensitivity": {
+          "type": "array",
+          "description": "Per-receptor saturation/starvation ranking. Predicts which receptors are 'saturated' (hormone excess relative to receptor availability) vs. 'starved' (receptor capacity exceeds active hormone concentration).",
+          "items": {
+            "type": "object",
+            "required": ["receptor_symbol", "saturation_status", "saturation_score"],
+            "additionalProperties": false,
+            "properties": {
+              "receptor_symbol": { "type": "string", "description": "e.g. 'AR', 'MC4R', 'GLP1R', 'OXTR'" },
+              "peptide_name": { "type": "string" },
+              "saturation_status": {
+                "type": "string",
+                "enum": ["SATURATED", "BALANCED", "STARVED", "ABSENT", "UNKNOWN"],
+                "description": "SATURATED = receptor likely at or near Bmax; STARVED = receptor capacity significantly exceeds hormone concentration."
+              },
+              "saturation_score": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "0.0 = completely starved; 0.5 = balanced; 1.0 = saturated. Derived from expression_z_score and peptide concentration proxy."
+              },
+              "hormone_concentration_proxy": {
+                "type": "string",
+                "enum": ["HIGH_FROM_MS", "NORMAL_INFERRED", "LOW_INFERRED", "ABSENT_FROM_MS", "NOT_ASSESSED"]
+              },
+              "receptor_expression_class": {
+                "type": ["string", "null"],
+                "enum": ["HIGH", "NORMAL", "LOW", "ABSENT", null]
+              },
+              "genotype_modifier": {
+                "type": ["string", "null"],
+                "description": "Short note on how the patient's genotype modifies receptor sensitivity, e.g. 'Short AR CAG repeat amplifies receptor sensitivity by ~30%.'"
+              },
+              "clinical_implication": {
+                "type": "string",
+                "description": "Plain-English receptor status note for the dossier."
+              }
+            }
+          }
+        },
+
+        "therapeutic_targetability": {
+          "type": "array",
+          "description": "Ranked list of peptide/hormone interventions with a 0–100 targetability score. Indicates whether a synthetic peptide analog could effectively outcompete the endogenous hormone or supplement a deficient pathway.",
+          "items": {
+            "type": "object",
+            "required": ["peptide_name", "targetability_score", "response_direction", "confidence_tier"],
+            "additionalProperties": false,
+            "properties": {
+              "peptide_name": { "type": "string" },
+              "peptide_class": { "type": "string" },
+              "targetability_score": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "0–100 score. 80–100 = strong candidate; 50–79 = moderate candidate with caveats; < 50 = poor candidate or contraindicated."
+              },
+              "response_direction": {
+                "type": "string",
+                "enum": ["enhanced", "standard", "blunted", "contraindicated"]
+              },
+              "confidence_tier": {
+                "type": "string",
+                "enum": ["A", "B", "C"],
+                "description": "Evidence quality: A=RCT/meta-analysis, B=cohort/case-control, C=case series/expert consensus."
+              },
+              "genetic_basis": {
+                "type": "array",
+                "description": "Gene-variant pairs from the patient's VCF that drive this response prediction.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "gene": { "type": "string" },
+                    "rsid": { "type": ["string", "null"] },
+                    "allele": { "type": "string" },
+                    "effect": { "type": "string" }
+                  }
+                }
+              },
+              "contraindication_flag": {
+                "type": "boolean",
+                "description": "Hard stop flag — if true, targetability_score is forced to 0 and contraindication_reason is populated."
+              },
+              "contraindication_reason": {
+                "type": ["string", "null"],
+                "description": "Populated only when contraindication_flag = true. e.g. 'RET pathogenic variant — FDA black box warning on all GLP-1 RAs.'"
+              },
+              "med_guidance": {
+                "type": ["string", "null"],
+                "description": "Minimum Effective Dose guidance for the clinician, genotype-adjusted."
+              },
+              "trade_offs": {
+                "type": ["string", "null"],
+                "description": "'No Free Lunch' note: biological costs, conversion risks, side effects."
+              },
+              "composite_evidence_score": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "The final weighted evidence score (Σ weight_i × score_i) for this peptide specifically."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

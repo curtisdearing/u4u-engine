@@ -1,4 +1,4 @@
-import type { JobStatus } from "./types";
+import type { JobStatus, JobListItem } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "https://flmanbiosci.net/api/v1";
 
@@ -34,4 +34,11 @@ export async function analyzeFile(
 /** Fetch the current status (and results when done) of a job. */
 export async function getJobStatus(jobId: string): Promise<JobStatus> {
   return apiFetch<JobStatus>(`/jobs/${jobId}`);
+}
+
+/** List recent jobs (status only — no results payload). */
+export async function listJobs(
+  limit = 50
+): Promise<{ jobs: JobListItem[] }> {
+  return apiFetch<{ jobs: JobListItem[] }>(`/jobs?limit=${limit}`);
 }

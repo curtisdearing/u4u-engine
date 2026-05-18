@@ -70,6 +70,7 @@ frontend/*.tsbuildinfo
 # Secrets / environment
 .env
 .env.*
+!.env.example
 *.key
 ExportBlock-*/
 one_variant.txt
