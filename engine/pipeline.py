@@ -22,6 +22,7 @@ Pipeline steps
   8c. call_ar_cag_repeat        — ExpansionHunter STR calling (if BAM provided)
   8d. map_receptors             — receptor expression + isoform prediction
   8e. calculate_prs             — polygenic risk scores for complex traits
+   8f. predict_bpc157_response   — BPC-157 response prediction (Grok Plan)
   9.  generate_summary (loop)  — plain-English consumer output
   10. sort by score descending
 
@@ -58,6 +59,7 @@ from .summary  import generate_summary
 from .annotators.kegg_mapper import map_variants_to_pathways, generate_pathway_summary
 from .annotators.receptor_mapper import map_receptors, generate_receptor_summary
 from .annotators.prs_calculator import calculate_prs
+from .annotators.bpc157_predictor import predict_bpc157_response, generate_bpc157_summary
 
 # V3 STR caller (optional — requires BAM + ExpansionHunter binary)
 try:
@@ -218,8 +220,12 @@ def run_pipeline(
     receptor_summary_text = generate_receptor_summary(receptor_profiles)
 
     # ── Step 8e: Polygenic Risk Scores ─────────────────────────────────────
-    _progress("Calculating polygenic risk scores", 98)
+    _progress("Calculating polygenic risk scores", 97)
     prs_profile = calculate_prs(final_results, ancestry=ancestry)
+
+    # ── Step 8f: BPC-157 Response Prediction (Grok Plan) ──────────────────
+    _progress("Predicting BPC-157 response", 99)
+    bpc157_prediction = predict_bpc157_response(final_results)
 
     # ── Step 10: Sort ────────────────────────────────────────────────────────
     final_results.sort(key=lambda x: x["score"], reverse=True)
@@ -239,6 +245,7 @@ def run_pipeline(
         },
         "prs_profile": prs_profile,
         "ar_cag_repeat": ar_cag_result,
+        "bpc157_prediction": bpc157_prediction,
     }
 
 

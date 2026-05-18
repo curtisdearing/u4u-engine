@@ -64,15 +64,17 @@ _CSV_ONE_VARIANT = b"chrom,pos,ref,alt,rsid\n17,41276045,A,G,rs80357906\n"
 @resp_lib.activate
 def test_pipeline_csv_returns_results():
     _register_happy_path(resp_lib)
-    results = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
-    assert len(results) == 1
+    output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    assert isinstance(output, dict)
+    assert "variants" in output
+    assert len(output["variants"]) == 1
 
 
 @resp_lib.activate
 def test_pipeline_result_has_all_required_fields():
     _register_happy_path(resp_lib)
-    results = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
-    r = results[0]
+    output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    r = output["variants"][0]
 
     required = [
         "variant_id", "rsid", "location", "consequence", "genes",
@@ -88,7 +90,8 @@ def test_pipeline_result_has_all_required_fields():
 @resp_lib.activate
 def test_pipeline_result_gene_not_na():
     _register_happy_path(resp_lib)
-    results = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    results = output["variants"]
     assert results[0]["genes"] != ["N/A"]
     assert "BRCA1" in results[0]["genes"]
 
@@ -96,7 +99,8 @@ def test_pipeline_result_gene_not_na():
 @resp_lib.activate
 def test_pipeline_pathogenic_scores_critical():
     _register_happy_path(resp_lib)
-    results = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    results = output["variants"]
     assert results[0]["tier"] == "critical"
     assert results[0]["score"] == 1000
 
@@ -141,8 +145,9 @@ def test_pipeline_sorted_by_score_descending():
     }, status=200)
 
     results = run_pipeline(csv, "test.csv")
-    assert len(results) == 2
-    assert results[0]["score"] >= results[1]["score"]
+    variants = results["variants"]
+    assert len(variants) == 2
+    assert variants[0]["score"] >= variants[1]["score"]
 
 
 # ---------------------------------------------------------------------------
@@ -178,8 +183,8 @@ def test_pipeline_no_duplicate_results():
         b"17,41276045,A,G,rs80357906\n"  # exact duplicate
     )
     _register_happy_path(resp_lib)
-    results = run_pipeline(csv, "test.csv")
-    assert len(results) == 1
+    output = run_pipeline(csv, "test.csv")
+    assert len(output["variants"]) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -198,3 +203,27 @@ def test_annotate_variant_standalone():
     assert result["clinvar"] == "pathogenic"
     assert "BRCA1" in result["genes"]
     assert result["gnomad_af"] is not None
+
+
+# ---------------------------------------------------------------------------
+# V3 enrichment keys present
+# ---------------------------------------------------------------------------
+
+@resp_lib.activate
+def test_pipeline_returns_bpc157_prediction():
+    _register_happy_path(resp_lib)
+    output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    assert "bpc157_prediction" in output
+    bpc = output["bpc157_prediction"]
+    assert "responder_tier" in bpc
+    assert "disclaimer" in bpc
+    assert "NOT FDA-approved" in bpc["disclaimer"]
+
+
+@resp_lib.activate
+def test_pipeline_returns_all_v3_keys():
+    _register_happy_path(resp_lib)
+    output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    for key in ["variants", "pathway_summary", "receptor_genetics",
+                "prs_profile", "ar_cag_repeat", "bpc157_prediction"]:
+        assert key in output, f"Missing V3 key: {key}"

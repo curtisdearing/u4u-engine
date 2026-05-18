@@ -17,3 +17,12 @@ services:
       # Remove this volume mount in production — bake data/ into the image instead.
       - ./data:/app/data:ro
     restart: unless-stopped
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE=http://localhost:8000
+    depends_on:
+      - api
+    restart: unless-stopped

@@ -14,6 +14,12 @@ export function Nav() {
 
         <nav className="flex items-center gap-4 text-sm">
           <Link
+            href="/jobs"
+            className="text-zinc-600 hover:text-zinc-900 transition-colors"
+          >
+            History
+          </Link>
+          <Link
             href="/"
             className="text-zinc-600 hover:text-zinc-900 transition-colors"
           >
