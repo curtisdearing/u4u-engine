@@ -69,6 +69,25 @@ export interface Bpc157Prediction {
   disclaimer: string;
 }
 
+export interface PeptideRecommendation {
+  peptide_name: string;
+  genes_for_genotyping: string[];
+  genes_found: string[];
+  genes_missing: string[];
+  coverage: number;
+  rationale: string;
+  references: string[];
+  category: string;
+  category_display: string;
+}
+
+export interface PeptideMapping {
+  recommendations: PeptideRecommendation[];
+  summary_text: string;
+  genes_found_total: string[];
+  peptides_with_coverage: number;
+}
+
 export interface JobStatus {
   job_id: string;
   status: "pending" | "running" | "done" | "failed";
@@ -81,6 +100,7 @@ export interface JobStatus {
   results?: {
     variants?: VariantResult[];
     bpc157_prediction?: Bpc157Prediction;
+    peptide_recommendations?: PeptideMapping;
     pathway_summary?: unknown;
     receptor_genetics?: unknown;
     prs_profile?: unknown;

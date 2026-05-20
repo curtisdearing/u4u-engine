@@ -221,9 +221,22 @@ def test_pipeline_returns_bpc157_prediction():
 
 
 @resp_lib.activate
+def test_pipeline_returns_peptide_recommendations():
+    _register_happy_path(resp_lib)
+    output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
+    assert "peptide_recommendations" in output
+    pr = output["peptide_recommendations"]
+    assert "recommendations" in pr
+    assert "summary_text" in pr
+    assert isinstance(pr["recommendations"], list)
+    assert len(pr["recommendations"]) > 0
+
+
+@resp_lib.activate
 def test_pipeline_returns_all_v3_keys():
     _register_happy_path(resp_lib)
     output = run_pipeline(_CSV_ONE_VARIANT, "test.csv")
     for key in ["variants", "pathway_summary", "receptor_genetics",
-                "prs_profile", "ar_cag_repeat", "bpc157_prediction"]:
+                "prs_profile", "ar_cag_repeat", "bpc157_prediction",
+                "peptide_recommendations"]:
         assert key in output, f"Missing V3 key: {key}"

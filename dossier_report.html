@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PeptOdyssey — Personalized Peptide Dossier Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0d1117;
+    --ink-2: #3a3f4a;
+    --ink-3: #6b7280;
+    --ink-4: #9ca3af;
+    --surface: #ffffff;
+    --surface-2: #f5f4f0;
+    --surface-3: #edecea;
+    --surface-4: #e3e1db;
+    --accent: #1a6b4a;
+    --accent-light: #e1f3eb;
+    --accent-mid: #2d8f61;
+    --accent-dark: #0f4530;
+    --blue: #1e4d8c;
+    --blue-light: #e8eef8;
+    --blue-mid: #3d6499;
+    --amber: #92550a;
+    --amber-light: #fdf3e3;
+    --red: #8b2020;
+    --red-light: #fbeaea;
+    --purple: #5b21b6;
+    --purple-light: #ede9fe;
+    --border: #dbd9d3;
+    --border-light: #edecea;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
+
+  @media print {
+    body { print-color-adjust: exact; -webkit-print-color-adjust: exact; background: white; }
+    .no-print { display: none !important; }
+    .page { margin: 0 auto !important; border: none !important; page-break-after: always; }
+    .page:last-of-type { page-break-after: auto; }
+  }
+
+  body { font-family: 'Outfit', sans-serif; font-size: 13px; line-height: 1.6; color: var(--ink); background: var(--surface-2); }
+
+  .page { width: 794px; min-height: 1123px; margin: 32px auto; background: var(--surface); border: 1px solid var(--border); position: relative; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* ─────────── HEADER ─────────── */
+  .header { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 36px 40px 28px; background: var(--blue-mid); }
+  .brand { display: flex; flex-direction: column; gap: 4px; }
+  .brand-name { font-family: 'DM Serif Display', serif; font-size: 32px; letter-spacing: -0.5px; color: #fff; line-height: 1; }
+  .brand-tagline { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.6); font-weight: 500; }
+  .report-meta { display: grid; grid-template-columns: auto auto; gap: 4px 16px; align-items: baseline; }
+  .meta-row { display: contents; }
+  .meta-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.5); font-weight: 500; text-align: right; }
+  .meta-value { font-family: 'DM Mono', monospace; color: #fff; font-size: 12px; }
+
+  /* ─────────── BODY ─────────── */
+  .body { padding: 28px 40px 36px; display: flex; flex-direction: column; gap: 24px; flex: 1; }
+
+  .section-head { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; border-bottom: 1.5px solid var(--ink); }
+  .section-num { font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1; color: var(--accent); }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1.1; color: var(--ink); }
+  .section-sub { margin-left: auto; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+
+  .panel-label { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--ink-3); margin-bottom: 8px; }
+
+  /* ─────────── §1 PATIENT INPUTS ─────────── */
+  .patient-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .patient-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; background: var(--surface); }
+  .patient-card.full { grid-column: 1 / -1; }
+  .patient-card.goals { background: var(--accent-light); border-color: var(--accent); border-width: 1.5px; grid-column: 1 / -1; }
+  .patient-card.goals .panel-label { color: var(--accent-dark); }
+
+  .demo-row { display: flex; flex-wrap: wrap; gap: 6px 24px; }
+  .demo-item { display: flex; flex-direction: column; gap: 1px; }
+  .demo-item .k { font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .demo-item .v { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--ink); }
+
+  .goals-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .goal-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; color: var(--ink); }
+  .goal-num { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .goal-text { font-weight: 500; }
+
+  .input-status { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-bottom: 8px; }
+  .input-status.complete { background: var(--accent-light); color: var(--accent); }
+  .input-status.partial  { background: var(--amber-light); color: var(--amber); }
+  .input-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+  .input-status.complete::before { background: var(--accent-mid); }
+  .input-status.partial::before  { background: #d4890a; }
+
+  .hx-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+  .hx-list li { font-size: 12px; color: var(--ink-2); position: relative; padding-left: 12px; }
+  .hx-list li::before { content: '•'; position: absolute; left: 2px; color: var(--ink-3); }
+
+  .completeness-note { background: var(--surface-2); border-left: 3px solid var(--accent); padding: 10px 14px; font-size: 11.5px; color: var(--ink-2); line-height: 1.55; border-radius: 0 var(--radius) var(--radius) 0; }
+  .completeness-note strong { color: var(--ink); }
+
+  /* ─────────── §2 SAFETY ─────────── */
+  .safety-block { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .safety-block + .safety-block { margin-top: 10px; }
+  .safety-items { padding: 4px 0; }
+  .safety-item { display: grid; grid-template-columns: 14px 1fr; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--border-light); font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+  .safety-item:last-child { border-bottom: none; }
+  .safety-item .sev { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .safety-item .sev.danger { background: #c94040; }
+  .safety-item .sev.warn   { background: #d4890a; }
+  .safety-item .sev.ok     { background: var(--accent-mid); }
+  .safety-item .source { display: block; margin-top: 3px; font-size: 10.5px; color: var(--ink-3); font-style: italic; }
+  .safety-item .source::before { content: 'Source: '; font-style: normal; color: var(--ink-4); letter-spacing: 0.05em; text-transform: uppercase; font-size: 9.5px; font-weight: 600; }
+
+  /* ─────────── §3 GOAL → PEPTIDES ─────────── */
+  .goal-flow { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; background: var(--surface); display: grid; grid-template-columns: 220px auto 1fr; gap: 18px; align-items: stretch; }
+  .goal-flow + .goal-flow { margin-top: 14px; }
+
+  .goal-card { background: var(--blue-light); border: 1px solid var(--blue); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .goal-card .gc-label { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue); font-weight: 700; }
+  .goal-card .gc-title { font-family: 'DM Serif Display', serif; font-size: 18px; line-height: 1.2; color: var(--ink); }
+  .goal-card .gc-rationale { font-size: 11px; color: var(--ink-2); line-height: 1.5; padding-top: 6px; border-top: 0.5px solid rgba(30,77,140,0.3); }
+
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--blue); font-size: 24px; }
+  .arrow svg { width: 28px; height: 28px; }
+
+  .peptide-stack-list { display: flex; flex-direction: column; gap: 8px; }
+  .peptide-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 14px; background: var(--surface); }
+  .peptide-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .peptide-card-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .peptide-card-status { font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 600; letter-spacing: 0.02em; }
+  .status-fda { background: var(--accent-light); color: var(--accent); }
+  .status-inv { background: var(--amber-light); color: var(--amber); }
+  .status-cosm { background: var(--blue-light); color: var(--blue); }
+
+  .dose-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; margin-bottom: 6px; }
+  .dose-cell { display: flex; flex-direction: column; gap: 0; }
+  .dose-cell .dl { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .dose-cell .dv { font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--ink); }
+  .dose-cell .dv.start { color: var(--accent); font-weight: 500; }
+  .dose-cell .dv.max   { color: var(--red); font-weight: 500; }
+
+  .titration { font-size: 11px; color: var(--ink-2); padding: 5px 0 5px; border-top: 0.5px solid var(--border-light); }
+  .titration::before { content: 'Titration: '; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+
+  .peptide-source { font-size: 10.5px; color: var(--ink-3); margin-top: 4px; padding-top: 6px; border-top: 0.5px solid var(--border-light); }
+  .peptide-source .src-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; color: var(--ink-4); display: inline-block; margin-right: 4px; }
+
+  .peptide-notes { margin-top: 6px; font-size: 11.5px; color: var(--ink-2); line-height: 1.55; }
+  .peptide-notes .nl { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; display: inline-block; margin-right: 4px; }
+  .peptide-notes .nsrc { display: block; font-size: 10px; color: var(--ink-3); font-style: italic; margin-top: 2px; }
+
+  /* ─────────── §4 GENOTYPING COVERAGE ─────────── */
+  .genotype-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .genotype-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; background: var(--surface); }
+  .genotype-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .genotype-card-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .genotype-category { font-size: 10px; color: var(--ink-3); font-weight: 500; }
+  .coverage-badge { font-size: 10px; font-weight: 600; padding: 2px 10px; border-radius: 12px; }
+  .coverage-full { background: var(--accent-light); color: var(--accent); }
+  .coverage-partial { background: var(--amber-light); color: var(--amber); }
+  .coverage-none { background: var(--surface-3); color: var(--ink-3); }
+  .gene-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .gene-chip { font-family: 'DM Mono', monospace; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; }
+  .gene-chip.found { background: var(--accent-light); color: var(--accent); border: 1px solid #b6e0c8; }
+  .gene-chip.missing { background: var(--surface-2); color: var(--ink-4); border: 1px solid var(--border-light); }
+  .genotype-rationale { font-size: 11px; color: var(--ink-2); line-height: 1.5; }
+
+  /* ─────────── VARIANT SUMMARY ─────────── */
+  .variant-summary { margin-top: 14px; }
+  .variant-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .variant-table th, .variant-table td { text-align: left; padding: 5px 8px; font-size: 11.5px; border-bottom: 0.5px solid var(--border-light); }
+  .variant-table th { font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; border-bottom: 1px solid var(--border); }
+  .variant-table td.gene { font-weight: 600; color: var(--ink); }
+  .variant-table td.rsid, .variant-table td.geno { font-family: 'DM Mono', monospace; color: var(--ink-2); }
+  .tier-badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .tier-critical { background: var(--red-light); color: var(--red); }
+  .tier-high { background: #fef3c7; color: #92400e; }
+  .tier-medium { background: var(--blue-light); color: var(--blue); }
+  .tier-low { background: var(--surface-3); color: var(--ink-3); }
+
+  /* ─────────── FOOTER ─────────── */
+  .footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 40px; border-top: 1px solid var(--border); background: var(--surface-2); margin-top: auto; }
+  .footer-brand { font-family: 'DM Serif Display', serif; font-size: 14px; color: var(--ink-2); }
+  .footer-note { font-size: 9.5px; color: var(--ink-3); text-align: center; max-width: 440px; line-height: 1.4; }
+  .footer-url { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-3); }
+
+  /* ─────────── PRINT BAR ─────────── */
+  .print-bar { width: 794px; margin: 0 auto 12px; display: flex; justify-content: space-between; align-items: center; }
+  .btn { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 18px; border-radius: 6px; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--ink-2); transition: background 0.15s; }
+  .btn:hover { background: var(--surface-3); }
+  .note-bar { font-size: 11px; color: var(--ink-3); font-style: italic; }
+
+  /* ─────────── DATA INPUT AREA ─────────── */
+  .data-input { width: 794px; margin: 0 auto 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+  .data-input h3 { font-family: 'DM Serif Display', serif; font-size: 18px; margin-bottom: 12px; color: var(--ink); }
+  .data-input textarea { width: 100%; height: 200px; font-family: 'DM Mono', monospace; font-size: 11px; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: var(--surface-2); color: var(--ink); resize: vertical; }
+  .data-input button { margin-top: 10px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; padding: 10px 24px; border-radius: 6px; cursor: pointer; border: none; background: var(--blue-mid); color: #fff; transition: background 0.15s; }
+  .data-input button:hover { background: var(--blue); }
+  .data-input .help-text { font-size: 11px; color: var(--ink-3); margin-top: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- DATA INPUT (no-print) -->
+<div class="data-input no-print">
+  <h3>Generate Dossier from Pipeline Output</h3>
+  <p class="help-text" style="margin-bottom: 10px;">
+    Paste the JSON output from the <code>run_pipeline()</code> function or the <code>/jobs/{id}</code> API endpoint below.
+    The dossier will be generated from the analysis results, including variant findings and peptide therapy coverage.
+  </p>
+  <textarea id="pipeline-json" placeholder='Paste pipeline JSON output here...
+Example: {"variants": [...], "peptide_recommendations": {...}, "bpc157_prediction": {...}, ...}'></textarea>
+  <button onclick="loadFromJson()">Generate Dossier</button>
+</div>
+
+<div class="print-bar no-print">
+  <span class="note-bar">Dossier generated from pipeline analysis output</span>
+  <button class="btn" onclick="window.print()">Print / Save PDF</button>
+</div>
+
+<!-- PAGE 1 -->
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-name">PeptOdyssey</div>
+      <div class="brand-tagline">Personalized peptide dossier &middot; for clinician &amp; patient</div>
+    </div>
+    <div class="report-meta">
+      <div class="meta-row">
+        <span class="meta-label">Analysis Date</span>
+        <span class="meta-value" id="meta-date"></span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Report ID</span>
+        <span class="meta-value" id="meta-reportid"></span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Variants Analyzed</span>
+        <span class="meta-value" id="meta-variant-count"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- ═══════ §1 ANALYSIS SUMMARY ═══════ -->
+    <section>
+      <div class="section-head">
+        <span class="section-num">1</span>
+        <h2 class="section-title">Analysis Summary</h2>
+        <span class="section-sub">Variant findings overview</span>
+      </div>
+
+      <div id="section-summary" style="margin-top: 14px;"></div>
+    </section>
+
+    <!-- ═══════ §2 KEY VARIANT FINDINGS ═══════ -->
+    <section>
+      <div class="section-head">
+        <span class="section-num">2</span>
+        <h2 class="section-title">Key Variant Findings</h2>
+        <span class="section-sub">Top clinical variants</span>
+      </div>
+
+      <div id="section-variants" class="variant-summary"></div>
+    </section>
+
+    <!-- ═══════ §3 BPC-157 RESPONSE PREDICTION ═══════ -->
+    <section>
+      <div class="section-head">
+        <span class="section-num">3</span>
+        <h2 class="section-title">BPC-157 Response Prediction</h2>
+        <span class="section-sub">Genetic response stratification</span>
+      </div>
+
+      <div id="section-bpc157" style="margin-top: 14px;"></div>
+    </section>
+
+    <!-- ═══════ §4 PEPTIDE GENOTYPING COVERAGE ═══════ -->
+    <section>
+      <div class="section-head">
+        <span class="section-num">4</span>
+        <h2 class="section-title">Peptide Genotyping Coverage</h2>
+        <span class="section-sub">Gene targets from peptide panel</span>
+      </div>
+
+      <div id="section-peptides"></div>
+    </section>
+
+  </div><!-- /.body -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-brand">PeptOdyssey</div>
+    <div class="footer-note">For clinician-supervised use. Recommendations are decision support, not a prescription. Starting and upper-bound doses are drawn from FDA labeling and peer-reviewed clinical trials where available; investigational peptides are explicitly marked.</div>
+    <div class="footer-url">peptodyssey.com</div>
+  </div>
+
+</div><!-- /.page -->
+
+<script>
+/* ================================================================
+   RENDERER — builds dossier from pipeline output JSON
+   ================================================================ */
+
+function generateReportId() {
+  const now = new Date();
+  const seq = Math.floor(Math.random() * 9000) + 1000;
+  return `POD-${now.getFullYear()}-${seq}`;
+}
+
+function renderDossier(data) {
+  const variants = data.variants || [];
+  const bpc157 = data.bpc157_prediction || null;
+  const peptides = data.peptide_recommendations || null;
+
+  /* Header */
+  const now = new Date();
+  document.getElementById("meta-date").textContent =
+    now.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
+  document.getElementById("meta-reportid").textContent = generateReportId();
+  document.getElementById("meta-variant-count").textContent = variants.length.toString();
+
+  /* §1 — Analysis Summary */
+  renderSummary(variants);
+
+  /* §2 — Key Variant Findings */
+  renderVariants(variants);
+
+  /* §3 — BPC-157 Prediction */
+  renderBpc157(bpc157);
+
+  /* §4 — Peptide Coverage */
+  renderPeptides(peptides);
+}
+
+/* ── §1 Summary ──────────────────────────────────────────────────────── */
+function renderSummary(variants) {
+  const container = document.getElementById("section-summary");
+
+  const tiers = { critical: 0, high: 0, medium: 0, low: 0 };
+  variants.forEach(v => { if (tiers[v.tier] !== undefined) tiers[v.tier]++; });
+
+  const allGenes = new Set();
+  variants.forEach(v => {
+    const genes = Array.isArray(v.genes) ? v.genes : [v.genes];
+    genes.forEach(g => { if (g) allGenes.add(g); });
+  });
+
+  container.innerHTML = `
+    <div class="patient-grid">
+      <div class="patient-card">
+        <div class="panel-label">Variants by Tier</div>
+        <div class="demo-row">
+          <div class="demo-item"><span class="k">Critical</span><span class="v" style="color:var(--red);font-weight:600">${tiers.critical}</span></div>
+          <div class="demo-item"><span class="k">High</span><span class="v" style="color:var(--amber);font-weight:600">${tiers.high}</span></div>
+          <div class="demo-item"><span class="k">Medium</span><span class="v" style="color:var(--blue);font-weight:600">${tiers.medium}</span></div>
+          <div class="demo-item"><span class="k">Low</span><span class="v">${tiers.low}</span></div>
+        </div>
+      </div>
+      <div class="patient-card">
+        <div class="panel-label">Analysis Scope</div>
+        <div class="demo-row">
+          <div class="demo-item"><span class="k">Total Variants</span><span class="v">${variants.length}</span></div>
+          <div class="demo-item"><span class="k">Genes Affected</span><span class="v">${allGenes.size}</span></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── §2 Key Variants ─────────────────────────────────────────────── */
+function renderVariants(variants) {
+  const container = document.getElementById("section-variants");
+
+  // Show top 15 by score
+  const top = variants.slice(0, 15);
+
+  if (top.length === 0) {
+    container.innerHTML = `<p style="margin-top:14px;color:var(--ink-3);font-size:12px;">No variants to display.</p>`;
+    return;
+  }
+
+  const tierClass = t => ({critical:'tier-critical',high:'tier-high',medium:'tier-medium',low:'tier-low'}[t] || 'tier-low');
+
+  container.innerHTML = `
+    <table class="variant-table">
+      <thead>
+        <tr>
+          <th>Variant</th>
+          <th>Gene(s)</th>
+          <th>Consequence</th>
+          <th>ClinVar</th>
+          <th>Tier</th>
+          <th>Headline</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${top.map(v => `
+          <tr>
+            <td class="rsid">${v.variant_id || v.rsid || '—'}</td>
+            <td class="gene">${(Array.isArray(v.genes) ? v.genes : [v.genes]).join(', ') || '—'}</td>
+            <td>${v.consequence_plain || v.consequence || '—'}</td>
+            <td>${v.clinvar_plain || v.clinvar || '—'}</td>
+            <td><span class="tier-badge ${tierClass(v.tier)}">${v.tier}</span></td>
+            <td style="max-width:180px;font-size:11px;color:var(--ink-2)">${v.headline || '—'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ${variants.length > 15 ? `<p style="margin-top:8px;font-size:10.5px;color:var(--ink-3);font-style:italic">Showing top 15 of ${variants.length} variants by clinical priority score.</p>` : ''}`;
+}
+
+/* ── §3 BPC-157 ──────────────────────────────────────────────────── */
+function renderBpc157(bpc157) {
+  const container = document.getElementById("section-bpc157");
+
+  if (!bpc157) {
+    container.innerHTML = `<p style="margin-top:14px;color:var(--ink-3);font-size:12px;">BPC-157 prediction data not available.</p>`;
+    return;
+  }
+
+  const tierLabels = {
+    likely_good: 'Likely Good Candidate',
+    possible: 'Possible Candidate',
+    uncertain: 'Uncertain',
+    low_confidence: 'Low Confidence',
+  };
+  const tierColors = {
+    likely_good: 'background:var(--accent-light);color:var(--accent)',
+    possible: 'background:var(--amber-light);color:var(--amber)',
+    uncertain: 'background:var(--surface-3);color:var(--ink-3)',
+    low_confidence: 'background:var(--red-light);color:var(--red)',
+  };
+
+  const pathways = (bpc157.pathways_affected || []).map(p => `
+    <li style="font-size:12px;color:var(--ink-2);padding-left:12px;position:relative;">
+      <span style="position:absolute;left:2px;color:var(--blue)">●</span>
+      <strong>${p.display_name || p.pathway}</strong>
+      ${p.genes_hit ? ` — ${p.genes_hit.join(', ')}` : ''}
+      ${p.coverage !== undefined ? ` (${Math.round(p.coverage * 100)}% coverage)` : ''}
+    </li>
+  `).join('');
+
+  const factors = (bpc157.candidate_factors || []).map(f => `
+    <li style="font-size:12px;color:var(--ink-2);padding-left:12px;position:relative;">
+      <span style="position:absolute;left:2px;color:var(--ink-3)">•</span>
+      <span style="font-family:'DM Mono',monospace;font-size:10.5px;background:var(--surface-2);padding:1px 4px;border-radius:3px">${f.rsid}</span>
+      (${f.gene}) — ${f.effect}
+    </li>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="patient-grid" style="margin-top:14px;">
+      <div class="patient-card full">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="panel-label" style="margin-bottom:0">Response Assessment</div>
+          <span style="font-size:11px;font-weight:700;padding:3px 12px;border-radius:12px;${tierColors[bpc157.responder_tier] || ''}">${tierLabels[bpc157.responder_tier] || bpc157.responder_tier}</span>
+        </div>
+        <p style="font-size:12px;color:var(--ink-2);line-height:1.55">${bpc157.summary_text || ''}</p>
+      </div>
+      ${pathways ? `
+        <div class="patient-card">
+          <div class="panel-label">Pathways Affected</div>
+          <ul class="hx-list" style="list-style:none">${pathways}</ul>
+        </div>` : ''}
+      ${factors ? `
+        <div class="patient-card">
+          <div class="panel-label">Genetic Modifiers</div>
+          <ul class="hx-list" style="list-style:none">${factors}</ul>
+        </div>` : ''}
+    </div>
+    ${bpc157.disclaimer ? `<div class="completeness-note" style="margin-top:10px"><strong>⚠ Important:</strong> ${bpc157.disclaimer}</div>` : ''}`;
+}
+
+/* ── §4 Peptide Coverage ─────────────────────────────────────────── */
+function renderPeptides(peptides) {
+  const container = document.getElementById("section-peptides");
+
+  if (!peptides || !peptides.recommendations) {
+    container.innerHTML = `<p style="margin-top:14px;color:var(--ink-3);font-size:12px;">Peptide coverage data not available.</p>`;
+    return;
+  }
+
+  const recs = peptides.recommendations;
+  const summary = peptides.summary_text || '';
+  const covered = peptides.peptides_with_coverage || 0;
+
+  const coverageClass = c => c >= 1 ? 'coverage-full' : c > 0 ? 'coverage-partial' : 'coverage-none';
+  const coverageLabel = c => c >= 1 ? 'Full' : c > 0 ? `${Math.round(c*100)}%` : 'None';
+
+  container.innerHTML = `
+    <div style="margin-top:14px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <span class="input-status ${covered > 0 ? 'complete' : 'partial'}">${covered} of ${recs.length} peptides have genotyping data</span>
+      </div>
+      <p style="font-size:12px;color:var(--ink-2);line-height:1.55;margin-bottom:14px;">${summary}</p>
+
+      <div class="genotype-grid">
+        ${recs.map(r => `
+          <div class="genotype-card">
+            <div class="genotype-card-head">
+              <div>
+                <span class="genotype-card-name">${r.peptide_name}</span>
+                <span class="genotype-category">${r.category_display || ''}</span>
+              </div>
+              <span class="coverage-badge ${coverageClass(r.coverage)}">${coverageLabel(r.coverage)}</span>
+            </div>
+            <div class="gene-chips">
+              ${r.genes_for_genotyping.map(g => {
+                const found = (r.genes_found || []).includes(g);
+                return `<span class="gene-chip ${found ? 'found' : 'missing'}">${found ? '✓' : '○'} ${g}</span>`;
+              }).join('')}
+            </div>
+            <div class="genotype-rationale">${r.rationale}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+/* ── Load from JSON ──────────────────────────────────────────────── */
+function loadFromJson() {
+  const textarea = document.getElementById("pipeline-json");
+  const raw = textarea.value.trim();
+
+  if (!raw) {
+    alert("Please paste the pipeline JSON output first.");
+    return;
+  }
+
+  try {
+    let data = JSON.parse(raw);
+
+    // Handle API response shape: { results: { variants: [...], ... } }
+    if (data.results && typeof data.results === 'object') {
+      data = data.results;
+    }
+
+    renderDossier(data);
+    // Scroll to the report
+    document.querySelector('.page').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    alert("Invalid JSON: " + e.message);
+  }
+}
+
+/* ── Auto-render if data is embedded ──────────────────────────────── */
+// To embed data directly, assign to window.__PIPELINE_DATA__ before this script runs
+if (window.__PIPELINE_DATA__) {
+  renderDossier(window.__PIPELINE_DATA__);
+}
+</script>
+</body>
+</html>

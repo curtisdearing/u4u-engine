@@ -23,6 +23,7 @@ Pipeline steps
   8d. map_receptors             — receptor expression + isoform prediction
   8e. calculate_prs             — polygenic risk scores for complex traits
    8f. predict_bpc157_response   — BPC-157 response prediction (Grok Plan)
+   8g. map_peptide_coverage       — peptide therapy candidate coverage
   9.  generate_summary (loop)  — plain-English consumer output
   10. sort by score descending
 
@@ -60,6 +61,7 @@ from .annotators.kegg_mapper import map_variants_to_pathways, generate_pathway_s
 from .annotators.receptor_mapper import map_receptors, generate_receptor_summary
 from .annotators.prs_calculator import calculate_prs
 from .annotators.bpc157_predictor import predict_bpc157_response, generate_bpc157_summary
+from .annotators.peptide_mapper import map_peptide_coverage
 
 # V3 STR caller (optional — requires BAM + ExpansionHunter binary)
 try:
@@ -224,8 +226,12 @@ def run_pipeline(
     prs_profile = calculate_prs(final_results, ancestry=ancestry)
 
     # ── Step 8f: BPC-157 Response Prediction (Grok Plan) ──────────────────
-    _progress("Predicting BPC-157 response", 99)
+    _progress("Predicting BPC-157 response", 98)
     bpc157_prediction = predict_bpc157_response(final_results)
+
+    # ── Step 8g: Peptide Therapy Coverage ──────────────────────────────────
+    _progress("Mapping peptide therapy candidates", 99)
+    peptide_mapping = map_peptide_coverage(final_results)
 
     # ── Step 10: Sort ────────────────────────────────────────────────────────
     final_results.sort(key=lambda x: x["score"], reverse=True)
@@ -246,6 +252,7 @@ def run_pipeline(
         "prs_profile": prs_profile,
         "ar_cag_repeat": ar_cag_result,
         "bpc157_prediction": bpc157_prediction,
+        "peptide_recommendations": peptide_mapping,
     }
 
 

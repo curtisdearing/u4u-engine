@@ -92,6 +92,7 @@ from .annotators.clinvar   import fetch_clinvar
 from .annotators.gnomad    import fetch_gnomad
 from .annotators.myvariant import fetch_myvariant
 from .annotators.bpc157_predictor import predict_bpc157_response, generate_bpc157_summary, filter_bpc157_relevant
+from .annotators.peptide_mapper import map_peptide_coverage, generate_peptide_summary
 
 __all__ = [
     # Pipeline
@@ -130,4 +131,7 @@ __all__ = [
     "predict_bpc157_response",
     "generate_bpc157_summary",
     "filter_bpc157_relevant",
+    # Peptide mapping
+    "map_peptide_coverage",
+    "generate_peptide_summary",
 ]
